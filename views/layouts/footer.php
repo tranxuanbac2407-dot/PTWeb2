@@ -29,19 +29,19 @@
                 <ul class="footer-contact">
                     <li>
                         <span class="footer-label">Địa chỉ:</span>
-                        <span>[Địa chỉ cửa hàng - nội dung mẫu, chờ cập nhật]</span>
+                        <span>Số 13 - Trịnh Văn Bô, Quận Bắc Từ Liêm, Hà Nội</span>
                     </li>
                     <li>
                         <span class="footer-label">Hotline:</span>
-                        <span>1900 0000 [số mẫu, chờ cập nhật]</span>
+                        <span>1900 0000 </span>
                     </li>
                     <li>
                         <span class="footer-label">Email:</span>
-                        <span>lienhe@sportix.example [email mẫu, chờ cập nhật]</span>
+                        <span>lienhe@sportix.example </span>
                     </li>
                     <li>
                         <span class="footer-label">Giờ mở cửa:</span>
-                        <span>8:00 - 22:00 tất cả các ngày [mẫu]</span>
+                        <span>8:00 - 22:00 tất cả các ngày </span>
                     </li>
                 </ul>
             </div>

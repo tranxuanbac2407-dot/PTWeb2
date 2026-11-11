@@ -28,15 +28,16 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 <div class="promo-bar">
     <div class="container">
         <span class="promo-bar-text">
-            <strong>GIẢM ĐẾN 50%</strong> CHO BỘ SƯU TẬP THỂ THAO MỚI &mdash;
-            <em>(Nội dung khuyến mãi mẫu, chờ cập nhật)</em>
+            <strong>GIẢM ĐẾN 50%</strong> CHO BỘ SƯU TẬP THỂ THAO MỚI &mdash; <a href="<?= BASE_URL ?>?action=products&amp;filter=sale">Xem ngay</a>
         </span>
     </div>
 </div>
 
 <header class="site-header">
+    <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
+
     <div class="container">
-        <div class="header-top">
+        <div class="header-main">
 
             <label class="nav-toggle-label" for="nav-toggle" aria-label="Mở menu chính">
                 <span class="hamburger-bar"></span>
@@ -45,6 +46,64 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
             </label>
 
             <a class="brand" href="<?= BASE_URL ?>">SPORTIX<span class="brand-dot">.</span></a>
+
+            <?php // Nhãn các mục menu con là danh mục mẫu - chờ dữ liệu thật từ bảng `categories`
+            // và trang danh sách sản phẩm (`?action=products`) do thành viên phụ trách xây dựng. ?>
+
+            <nav class="main-nav" aria-label="Menu chính">
+                <ul class="nav-menu">
+                <li>
+                    <a href="<?= BASE_URL ?>">Trang chủ</a>
+                </li>
+
+                <li class="has-submenu">
+                    <a href="<?= BASE_URL ?>?action=products&amp;category=nam">Nam <span class="caret">&#9662;</span></a>
+                    <ul class="submenu">
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=ao">Áo thể thao nam</a></li>
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=quan">Quần thể thao nam</a></li>
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=bo">Bộ đồ thể thao nam</a></li>
+                    </ul>
+                </li>
+
+                <li class="has-submenu">
+                    <a href="<?= BASE_URL ?>?action=products&amp;category=nu">Nữ <span class="caret">&#9662;</span></a>
+                    <ul class="submenu">
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=ao">Áo thể thao nữ</a></li>
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=quan">Quần thể thao nữ</a></li>
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=bo">Bộ đồ thể thao nữ</a></li>
+                    </ul>
+                </li>
+
+                <li class="has-submenu">
+                    <a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien">Phụ kiện <span class="caret">&#9662;</span></a>
+                    <ul class="submenu">
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=giay">Giày &amp; dép thể thao</a></li>
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=balo">Balo &amp; túi thể thao</a></li>
+                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=khac">Mũ &amp; phụ kiện khác</a></li>
+                    </ul>
+                </li>
+
+                <li>
+                    <a href="<?= BASE_URL ?>?action=products&amp;filter=new">Sản phẩm mới</a>
+                </li>
+
+                <li>
+                    <a class="nav-sale" href="<?= BASE_URL ?>?action=products&amp;filter=sale">Khuyến mãi</a>
+                </li>
+                </ul>
+            </nav>
+
+            <form class="search-form" action="<?= BASE_URL ?>" method="get" role="search">
+                <input type="hidden" name="action" value="search">
+                <input class="search-input" type="text" name="keyword"
+                       placeholder="Tìm kiếm sản phẩm..."
+                       value="<?= htmlspecialchars($_GET['keyword'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                <button class="search-btn" type="submit" aria-label="Tìm kiếm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.09.09l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.09-.09zm-1.443-.178a5.5 5.5 0 1 1 .9-.9z"/>
+                    </svg>
+                </button>
+            </form>
 
             <div class="header-actions">
 
@@ -86,66 +145,4 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
             </div>
         </div>
     </div>
-
-    <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
-
-    <?php // Nhãn các mục menu con là danh mục mẫu - chờ dữ liệu thật từ bảng `categories`
-    // và trang danh sách sản phẩm (`?action=products`) do thành viên phụ trách xây dựng. ?>
-
-    <nav class="main-nav" aria-label="Menu chính">
-        <div class="container">
-            <ul class="nav-menu">
-                <li>
-                    <a href="<?= BASE_URL ?>">Trang chủ</a>
-                </li>
-
-                <li class="has-submenu">
-                    <a href="<?= BASE_URL ?>?action=products&amp;category=nam">Nam <span class="caret">&#9662;</span></a>
-                    <ul class="submenu">
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=ao">Áo thể thao nam</a></li>
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=quan">Quần thể thao nam</a></li>
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=bo">Bộ đồ thể thao nam</a></li>
-                    </ul>
-                </li>
-
-                <li class="has-submenu">
-                    <a href="<?= BASE_URL ?>?action=products&amp;category=nu">Nữ <span class="caret">&#9662;</span></a>
-                    <ul class="submenu">
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=ao">Áo thể thao nữ</a></li>
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=quan">Quần thể thao nữ</a></li>
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=bo">Bộ đồ thể thao nữ</a></li>
-                    </ul>
-                </li>
-
-                <li class="has-submenu">
-                    <a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien">Phụ kiện <span class="caret">&#9662;</span></a>
-                    <ul class="submenu">
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=giay">Giày &amp; dép thể thao</a></li>
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=balo">Balo &amp; túi thể thao</a></li>
-                        <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=khac">Mũ &amp; phụ kiện khác</a></li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a href="<?= BASE_URL ?>?action=products&amp;filter=new">Sản phẩm mới</a>
-                </li>
-
-                <li>
-                    <a class="nav-sale" href="<?= BASE_URL ?>?action=products&amp;filter=sale">Khuyến mãi</a>
-                </li>
-            </ul>
-
-            <form class="search-form" action="<?= BASE_URL ?>" method="get" role="search">
-                <input type="hidden" name="action" value="search">
-                <input class="search-input" type="text" name="keyword"
-                       placeholder="Tìm kiếm sản phẩm..."
-                       value="<?= htmlspecialchars($_GET['keyword'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-                <button class="search-btn" type="submit" aria-label="Tìm kiếm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.09.09l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.09-.09zm-1.443-.178a5.5 5.5 0 1 1 .9-.9z"/>
-                    </svg>
-                </button>
-            </form>
-        </div>
-    </nav>
 </header>
