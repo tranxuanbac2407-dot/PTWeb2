@@ -198,6 +198,17 @@ label:focus-visible {
     display: block;
 }
 
+/* "Cầu nối" trong suốt lấp khe hở giữa nút tài khoản và menu con,
+   giúp menu không bị đóng khi rê chuột từ nút xuống menu. */
+.account-submenu::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+}
+
 .account-submenu a {
     display: block;
     padding: 0.5rem 0.75rem;
@@ -578,6 +589,77 @@ label:focus-visible {
 .notfound-hint {
     margin-bottom: 1.5rem;
     color: var(--sx-muted);
+}
+
+/* ---------- Trang xác thực (đăng ký / đăng nhập) ---------- */
+
+.auth-section {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0 2rem;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 460px;
+    padding: 2rem 1.75rem;
+    background: var(--sx-bg);
+    border: 1px solid var(--sx-border);
+    border-radius: 16px;
+    box-shadow: var(--sx-shadow);
+}
+
+.auth-title {
+    margin-bottom: 0.35rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--sx-primary);
+    text-align: center;
+}
+
+.auth-subtitle {
+    margin-bottom: 1.5rem;
+    color: var(--sx-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.auth-switch {
+    margin: 1.25rem 0 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--sx-muted);
+}
+
+.auth-switch a {
+    color: var(--sx-accent);
+    font-weight: 700;
+}
+
+.auth-switch a:hover {
+    color: var(--sx-accent-dark);
+}
+
+.auth-card .form-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--sx-text);
+}
+
+.btn-sportix {
+    display: inline-block;
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--sx-primary);
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.btn-sportix:hover {
+    background: var(--sx-accent);
+    color: #ffffff;
 }
 
 /* ---------- Footer ---------- */
