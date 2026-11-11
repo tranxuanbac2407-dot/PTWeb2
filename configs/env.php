@@ -6,7 +6,9 @@ define('PATH_ROOT',         __DIR__ . '/../');
 
 define('PATH_VIEW',         PATH_ROOT . 'views/');
 
-define('PATH_VIEW_MAIN',    PATH_ROOT . 'views/main.php');
+define('PATH_VIEW_MAIN',    PATH_ROOT . 'views/layouts/main.php');
+
+define('PATH_VIEW_LAYOUT', PATH_ROOT . 'views/layouts/');
 
 define('BASE_ASSETS_UPLOADS',   BASE_URL . 'assets/uploads/');
 
