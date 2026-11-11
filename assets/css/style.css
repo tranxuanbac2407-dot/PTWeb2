@@ -170,6 +170,25 @@ label:focus-visible {
     color: var(--sx-accent);
 }
 
+/* Nút truy cập nhanh khu vực quản trị (chỉ hiển thị với tài khoản Admin) */
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--sx-primary);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--sx-primary);
+    white-space: nowrap;
+}
+
+.admin-link:hover {
+    background: var(--sx-primary);
+    color: #ffffff;
+}
+
 .account-name {
     max-width: 120px;
     overflow: hidden;
@@ -893,6 +912,14 @@ label:focus-visible {
 
     .site-content {
         padding: 1rem 0 2rem;
+    }
+
+    .admin-link {
+        padding: 0.45rem;
+    }
+
+    .admin-link span {
+        display: none;
     }
 
     .hero {

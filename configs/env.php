@@ -10,6 +10,12 @@ define('PATH_VIEW_MAIN',    PATH_ROOT . 'views/layouts/main.php');
 
 define('PATH_VIEW_LAYOUT', PATH_ROOT . 'views/layouts/');
 
+define('PATH_VIEW_ADMIN',        PATH_ROOT . 'views/admin/');
+
+define('PATH_VIEW_ADMIN_LAYOUT', PATH_VIEW_ADMIN . 'layouts/');
+
+define('PATH_VIEW_ADMIN_MAIN',   PATH_VIEW_ADMIN_LAYOUT . 'main.php');
+
 define('BASE_ASSETS_UPLOADS',   BASE_URL . 'assets/uploads/');
 
 define('PATH_ASSETS_UPLOADS',   PATH_ROOT . 'assets/uploads/');
