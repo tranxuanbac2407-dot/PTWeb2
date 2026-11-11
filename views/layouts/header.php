@@ -11,12 +11,18 @@
 // logout, account, cart và các trang nội dung trong footer.
 
 $currentUserName = null;
+$currentUserRole = null;
 
 if (isset($_SESSION['user'])) {
-    $currentUserName = is_array($_SESSION['user'])
-        ? ($_SESSION['user']['username'] ?? null)
-        : $_SESSION['user'];
+    if (is_array($_SESSION['user'])) {
+        $currentUserName = $_SESSION['user']['username'] ?? null;
+        $currentUserRole = $_SESSION['user']['role'] ?? null;
+    } else {
+        $currentUserName = $_SESSION['user'];
+    }
 }
+
+$isAdmin = $currentUserRole === 'admin';
 
 $cartCount = 0;
 
@@ -107,6 +113,16 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 
             <div class="header-actions">
 
+                <?php if ($isAdmin): ?>
+                    <a class="admin-link" href="<?= BASE_URL ?>?action=admin"
+                       aria-label="Trang quản trị" title="Trang quản trị">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                        </svg>
+                        <span>Quản trị</span>
+                    </a>
+                <?php endif; ?>
+
                 <div class="account-menu">
                     <?php if ($currentUserName): ?>
                         <a class="account-toggle" href="<?= BASE_URL ?>?action=account">
@@ -117,6 +133,9 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
                             <span class="caret">&#9662;</span>
                         </a>
                         <ul class="account-submenu">
+                            <?php if ($isAdmin): ?>
+                                <li><a href="<?= BASE_URL ?>?action=admin">Trang quản trị</a></li>
+                            <?php endif; ?>
                             <li><a href="<?= BASE_URL ?>?action=account">Thông tin tài khoản</a></li>
                             <li><a href="<?= BASE_URL ?>?action=logout">Đăng xuất</a></li>
                         </ul>
