@@ -73,19 +73,20 @@ label:focus-visible {
     border-bottom: 1px solid var(--sx-border);
 }
 
-.header-top {
+/* Một hàng duy nhất: Logo | Danh mục | Tìm kiếm | Tài khoản | Giỏ hàng */
+.header-main {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    padding: 0.85rem 0.75rem;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
 }
 
 .brand {
     flex-shrink: 0;
-    font-size: 1.75rem;
+    font-size: 1.35rem;
     font-weight: 900;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     line-height: 1;
     color: var(--sx-primary);
 }
@@ -98,13 +99,13 @@ label:focus-visible {
     color: var(--sx-accent);
 }
 
-/* ----- Thanh tìm kiếm (nằm bên phải menu danh mục, cùng một hàng) ----- */
+/* ----- Thanh tìm kiếm (nằm ngay bên phải menu danh mục) ----- */
 
 .search-form {
-    flex: 0 1 300px;
-    min-width: 180px;
+    flex: 1 1 160px;
+    min-width: 110px;
     max-width: 300px;
-    margin-left: auto;
+    margin-left: 0.15rem;
     display: flex;
     background: var(--sx-bg);
     border: 2px solid var(--sx-primary);
@@ -146,8 +147,9 @@ label:focus-visible {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.9rem;
+    gap: 0.6rem;
     margin-left: auto;
+    flex-shrink: 0;
 }
 
 .account-menu {
@@ -250,21 +252,15 @@ label:focus-visible {
 }
 
 .main-nav {
+    flex: 0 0 auto;
     background: var(--sx-bg);
 }
 
-/* Menu danh mục bên trái, thanh tìm kiếm bên phải trên cùng một hàng */
-.main-nav .container {
+/* Menu danh mục nằm ngay sau logo, không xuống dòng trên desktop */
+.nav-menu {
     display: flex;
     align-items: center;
-    gap: 1rem;
-}
-
-.nav-menu {
-    flex: 1 1 auto;
-    display: flex;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -278,11 +274,12 @@ label:focus-visible {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    padding: 0.85rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.55rem 0.55rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
+    white-space: nowrap;
     color: var(--sx-text);
 }
 
@@ -677,11 +674,30 @@ label:focus-visible {
 
 /* ---------- Responsive (mobile & tablet) ---------- */
 
-@media (max-width: 991.98px) {
+/* Màn hình lớn: nới rộng thoải mái hơn */
+@media (min-width: 1200px) {
 
-    .header-top {
-        padding: 0.6rem 0.5rem;
+    .header-main {
+        gap: 0.75rem;
+        padding: 0.7rem 0.75rem;
     }
+
+    .brand {
+        font-size: 1.6rem;
+        letter-spacing: 3px;
+    }
+
+    .nav-menu > li > a {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.82rem;
+    }
+
+    .search-form {
+        max-width: 320px;
+    }
+}
+
+@media (max-width: 991.98px) {
 
     .nav-toggle-label {
         display: inline-flex;
@@ -712,28 +728,31 @@ label:focus-visible {
         letter-spacing: 2px;
     }
 
-    /* main-nav luôn hiển thị để giữ thanh tìm kiếm; menu danh mục thu gọn theo checkbox */
-    .main-nav {
-        display: block;
-        border-top: 1px solid var(--sx-border);
+    /* Header mobile: hàng trên gồm hamburger, logo, tài khoản, giỏ hàng;
+       thanh tìm kiếm xuống hàng dưới; menu danh mục mở bằng checkbox. */
+    .header-main {
+        flex-wrap: wrap;
+        gap: 0.5rem 0.75rem;
+        padding: 0.5rem;
     }
 
-    .main-nav .container {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.65rem;
-        padding-top: 0.65rem;
-        padding-bottom: 0.65rem;
+    .header-actions {
+        margin-left: auto;
     }
 
     .search-form {
-        order: -1;
-        flex: 0 0 auto;
+        order: 3;
+        flex: 1 1 100%;
         width: 100%;
         min-width: 0;
         max-width: none;
         margin: 0;
+    }
+
+    .main-nav {
+        order: 4;
+        flex: 1 1 100%;
+        min-width: 0;
     }
 
     .account-name {
@@ -744,10 +763,11 @@ label:focus-visible {
         display: none;
     }
 
-    .nav-toggle-input:checked ~ .main-nav .nav-menu {
+    .nav-toggle-input:checked ~ .container .nav-menu {
         display: flex;
         flex-direction: column;
         align-items: stretch;
+        width: 100%;
     }
 
     .nav-menu > li > a {
@@ -757,6 +777,7 @@ label:focus-visible {
         font-size: 0.95rem;
         text-transform: none;
         letter-spacing: 0.3px;
+        white-space: normal;
     }
 
     .nav-menu > li:last-child > a {
