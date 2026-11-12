@@ -8,8 +8,9 @@
 
     <title><?= $title ?? 'SPORTIX | Thời trang thể thao nam & nữ' ?></title>
 
-    <!-- Bootstrap CSS (không dùng Bootstrap JS theo yêu cầu dự án) -->
+    <!-- Bootstrap CSS & Bootstrap Icons (không dùng Bootstrap JS theo yêu cầu dự án) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
     <!-- CSS dùng chung của SPORTIX -->
     <link href="<?= BASE_URL ?>assets/css/style.css?v=<?= @filemtime(PATH_ROOT . 'assets/css/style.css') ?>" rel="stylesheet">
