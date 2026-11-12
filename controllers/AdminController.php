@@ -13,12 +13,18 @@ class AdminController extends BaseController
      */
     public function dashboard()
     {
+        $categoryModel = new CategoryModel();
+        $totalCategories = count($categoryModel->getAll());
+
         $this->renderAdminPage(
             'dashboard',
             'Dashboard | Quản trị SPORTIX',
             'Dashboard',
             'Tổng quan hoạt động của cửa hàng SPORTIX.',
-            'dashboard'
+            'dashboard',
+            [
+                'totalCategories' => $totalCategories,
+            ]
         );
     }
 

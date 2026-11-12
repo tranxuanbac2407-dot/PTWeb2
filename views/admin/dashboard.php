@@ -60,8 +60,8 @@ $quickLinks = [
                     <i class="bi bi-tags" aria-hidden="true"></i>
                 </span>
                 <p class="admin-stat-label">Tổng số danh mục</p>
-                <p class="admin-stat-value">&mdash;</p>
-                <p class="admin-stat-note">Chưa có dữ liệu thống kê</p>
+                <p class="admin-stat-value"><?= isset($totalCategories) ? (int) $totalCategories : '&mdash;' ?></p>
+                <p class="admin-stat-note"><?= isset($totalCategories) ? 'Danh mục đang hoạt động' : 'Chưa có dữ liệu thống kê' ?></p>
             </article>
         </div>
 
