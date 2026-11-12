@@ -12,11 +12,14 @@ match ($action) {
     'logout'   => (new AuthController)->logout(),
 
     // Khu vực quản trị (mọi route đều được AdminController kiểm tra quyền)
-    'admin'            => (new AdminController)->dashboard(),
-    'admin-categories' => (new AdminController)->categories(),
-    'admin-products'   => (new AdminController)->products(),
-    'admin-users'      => (new AdminController)->users(),
-    'admin-orders'     => (new AdminController)->orders(),
+    'admin'                 => (new AdminController)->dashboard(),
+    'admin-categories'      => (new AdminController)->categories(),
+    'admin-category-create' => (new AdminController)->categoryCreate(),
+    'admin-category-edit'   => (new AdminController)->categoryEdit(),
+    'admin-category-delete' => (new AdminController)->categoryDelete(),
+    'admin-products'        => (new AdminController)->products(),
+    'admin-users'           => (new AdminController)->users(),
+    'admin-orders'          => (new AdminController)->orders(),
 
     default    => (new HomeController)->notFound(),
 };
