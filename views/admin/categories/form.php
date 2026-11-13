@@ -118,33 +118,7 @@ $valDesc = $old['description'] ?? ($category['description'] ?? '');
             </div>
         </div>
 
-        <!-- Khối hướng dẫn / lưu ý -->
-        <div class="col-12 col-lg-4">
-            <div class="admin-card">
-                <div class="admin-card-header">
-                    <h3>
-                        <i class="bi bi-info-circle-fill text-accent" aria-hidden="true"></i>
-                        <span>Lưu ý khi quản lý</span>
-                    </h3>
-                </div>
-                <div class="admin-card-body">
-                    <ul class="admin-tips-list">
-                        <li>
-                            <strong>Tên danh mục duy nhất:</strong>
-                            <span>Không được trùng với tên danh mục đã có trong hệ thống để tránh nhầm lẫn khi phân loại sản phẩm.</span>
-                        </li>
-                        <li>
-                            <strong>Ràng buộc dữ liệu:</strong>
-                            <span>Khi danh mục đang có sản phẩm liên kết, hệ thống sẽ bảo vệ và không cho phép xóa để bảo đảm toàn vẹn dữ liệu đơn hàng và sản phẩm.</span>
-                        </li>
-                        <li>
-                            <strong>Hiển thị trên website:</strong>
-                            <span>Các danh mục có sản phẩm sẽ được tự động đồng bộ hiển thị lên menu điều hướng và mục Danh mục nổi bật tại trang chủ SPORTIX.</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        
     </div>
 
 </div>

@@ -81,11 +81,7 @@ class HomeController
 
     public function notFound()
     {
-        http_response_code(404);
-
-        $title = 'Không tìm thấy trang | SPORTIX';
-        $view  = '404';
-
-        require_once PATH_VIEW_MAIN;
+        header("Location: " . BASE_URL);
+        exit;
     }
 }
