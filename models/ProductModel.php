@@ -5,6 +5,58 @@ class ProductModel extends BaseModel
     protected $table = 'products';
 
     /**
+     * Lấy toàn bộ sản phẩm kèm tên danh mục (phục vụ trang quản lý Admin).
+     *
+     * Không dùng dữ liệu mẫu: nếu truy vấn thất bại, PDOException sẽ được ném ra
+     * để Controller hiển thị thông báo tải dữ liệu thất bại.
+     *
+     * @return array
+     */
+    public function getAllWithCategory()
+    {
+        $sql = 'SELECT p.product_id, p.category_id, p.product_name, p.price, p.description, '
+             . 'p.image, p.size, p.color, p.stock_quantity, c.categories_name '
+             . 'FROM ' . $this->table . ' p '
+             . 'LEFT JOIN categories c ON p.category_id = c.categories_id '
+             . 'ORDER BY p.product_id DESC';
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
+    /**
+     * Thêm mới sản phẩm vào CSDL.
+     *
+     * @param array $data Các trường của bảng products (trừ product_id tự tăng)
+     * @return int|false ID vừa tạo hoặc false nếu thất bại
+     */
+    public function create(array $data)
+    {
+        try {
+            $sql = 'INSERT INTO ' . $this->table
+                 . ' (category_id, product_name, price, description, image, size, color, stock_quantity) '
+                 . 'VALUES (:category_id, :product_name, :price, :description, :image, :size, :color, :stock_quantity)';
+
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':category_id', (int) $data['category_id'], PDO::PARAM_INT);
+            $statement->bindValue(':product_name', trim($data['product_name']));
+            $statement->bindValue(':price', number_format((float) $data['price'], 2, '.', ''), PDO::PARAM_STR);
+            $statement->bindValue(':description', $data['description'] !== '' ? $data['description'] : null);
+            $statement->bindValue(':image', !empty($data['image']) ? $data['image'] : null);
+            $statement->bindValue(':size', !empty($data['size']) ? $data['size'] : null);
+            $statement->bindValue(':color', !empty($data['color']) ? $data['color'] : null);
+            $statement->bindValue(':stock_quantity', (int) $data['stock_quantity'], PDO::PARAM_INT);
+            $statement->execute();
+
+            return (int) $this->pdo->lastInsertId();
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
      * Tìm kiếm sản phẩm theo từ khóa.
      *
      * @param string $keyword
