@@ -251,17 +251,248 @@ class AdminController extends BaseController
        ========================================================= */
 
     /**
-     * Trang quản lý sản phẩm (khung giao diện, chờ nhiệm vụ CRUD).
+     * Danh sách sản phẩm trong khu vực quản trị.
      */
     public function products()
     {
+        $this->requireAdmin();
+
+        $productModel = new ProductModel();
+        $products     = [];
+        $loadError    = null;
+
+        try {
+            $products = $productModel->getAllWithCategory();
+        } catch (Throwable $e) {
+            $loadError = 'Không thể tải danh sách sản phẩm từ cơ sở dữ liệu. Vui lòng thử lại sau.';
+        }
+
+        $flashSuccess = $this->getFlash('success');
+        $flashError   = $this->getFlash('error');
+
         $this->renderAdminPage(
             'products/index',
             'Quản lý sản phẩm | Quản trị SPORTIX',
             'Quản lý sản phẩm',
             'Danh sách sản phẩm đang kinh doanh tại SPORTIX.',
-            'products'
+            'products',
+            [
+                'products'     => $products,
+                'loadError'    => $loadError,
+                'flashSuccess' => $flashSuccess,
+                'flashError'   => $flashError,
+            ]
         );
+    }
+
+    /**
+     * Thêm mới sản phẩm (GET: hiển thị form, POST: xử lý lưu).
+     */
+    public function productCreate()
+    {
+        $this->requireAdmin();
+
+        $productModel  = new ProductModel();
+        $categoryModel = new CategoryModel();
+
+        $errors = [];
+        $old = [
+            'product_name'   => '',
+            'category_id'    => '',
+            'price'          => '',
+            'description'    => '',
+            'size'           => '',
+            'color'          => '',
+            'stock_quantity' => '',
+        ];
+
+        $categories = $categoryModel->getAll(false);
+        $flashError = $this->getFlash('error');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $old['product_name']   = trim($_POST['product_name'] ?? '');
+            $old['category_id']    = trim($_POST['category_id'] ?? '');
+            $old['price']          = trim($_POST['price'] ?? '');
+            $old['description']    = trim($_POST['description'] ?? '');
+            $old['size']           = trim($_POST['size'] ?? '');
+            $old['color']          = trim($_POST['color'] ?? '');
+            $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '');
+
+            // 1. Kiểm tra CSRF
+            if (!$this->csrfValid()) {
+                $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
+            }
+
+            // 2. Tên sản phẩm
+            if ($old['product_name'] === '') {
+                $errors['product_name'] = 'Vui lòng nhập tên sản phẩm.';
+            } elseif (mb_strlen($old['product_name']) > 200) {
+                $errors['product_name'] = 'Tên sản phẩm không được vượt quá 200 ký tự.';
+            }
+
+            // 3. Danh mục phải tồn tại trong CSDL
+            $categoryId = filter_var($old['category_id'], FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 1],
+            ]);
+            if ($categoryId === false) {
+                $errors['category_id'] = 'Vui lòng chọn danh mục sản phẩm.';
+            } elseif (!$categoryModel->exists($categoryId)) {
+                $errors['category_id'] = 'Danh mục đã chọn không tồn tại. Vui lòng chọn danh mục khác.';
+            }
+
+            // 4. Giá bán: số hợp lệ, lớn hơn 0
+            if ($old['price'] === '' || !is_numeric($old['price'])) {
+                $errors['price'] = 'Giá bán phải là số hợp lệ.';
+            } elseif ((float) $old['price'] <= 0) {
+                $errors['price'] = 'Giá bán phải lớn hơn 0.';
+            } elseif ((float) $old['price'] > 9999999999.99) {
+                $errors['price'] = 'Giá bán vượt quá giới hạn cho phép.';
+            }
+
+            // 5. Số lượng tồn kho: số nguyên không âm
+            $stock = filter_var($old['stock_quantity'], FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 0],
+            ]);
+            if ($stock === false) {
+                $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
+            }
+
+            // 6. Kích thước / màu sắc không vượt quá độ dài cột
+            if (mb_strlen($old['size']) > 50) {
+                $errors['size'] = 'Kích thước không được vượt quá 50 ký tự.';
+            }
+            if (mb_strlen($old['color']) > 50) {
+                $errors['color'] = 'Màu sắc không được vượt quá 50 ký tự.';
+            }
+
+            // 7. Hình ảnh (không bắt buộc)
+            $imagePath = null;
+            $hasUpload = isset($_FILES['image'])
+                && is_array($_FILES['image'])
+                && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+
+            if (empty($errors) && $hasUpload) {
+                try {
+                    $imagePath = $this->storeProductImage($_FILES['image']);
+                } catch (Throwable $e) {
+                    $errors['image'] = $e->getMessage();
+                }
+            }
+
+            // 8. Lưu sản phẩm khi dữ liệu hợp lệ
+            if (empty($errors)) {
+                $created = $productModel->create([
+                    'category_id'    => (int) $categoryId,
+                    'product_name'   => $old['product_name'],
+                    'price'          => (float) $old['price'],
+                    'description'    => $old['description'],
+                    'image'          => $imagePath,
+                    'size'           => $old['size'],
+                    'color'          => $old['color'],
+                    'stock_quantity' => (int) $stock,
+                ]);
+
+                if ($created !== false) {
+                    $this->setFlash('success', 'Thêm sản phẩm "' . $old['product_name'] . '" thành công!');
+                    $this->redirect('?action=admin-products');
+                }
+
+                // Dọn file vừa upload nếu INSERT thất bại
+                if (!empty($imagePath)) {
+                    @unlink(PATH_ASSETS_UPLOADS . str_replace('/', DIRECTORY_SEPARATOR, $imagePath));
+                }
+
+                $errors['general'] = 'Không thể lưu sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại sau.';
+            }
+        }
+
+        $csrfToken = $this->csrfToken();
+
+        $this->renderAdminPage(
+            'products/create',
+            'Thêm sản phẩm mới | Quản trị SPORTIX',
+            'Thêm sản phẩm mới',
+            'Tạo mới sản phẩm thể thao cho cửa hàng.',
+            'products',
+            [
+                'categories'  => $categories,
+                'old'         => $old,
+                'errors'      => $errors,
+                'csrfToken'   => $csrfToken,
+                'flashError'  => $flashError,
+            ]
+        );
+    }
+
+    /**
+     * Kiểm tra và lưu file hình ảnh sản phẩm vào assets/uploads/products.
+     *
+     * @param array $file Một phần tử trong $_FILES
+     * @return string Đường dẫn tương đối lưu trong cột products.image
+     * @throws Exception Khi file không hợp lệ hoặc lưu thất bại
+     */
+    private function storeProductImage(array $file)
+    {
+        if (!isset($file['error']) || is_array($file['error'])) {
+            throw new Exception('Dữ liệu hình ảnh không hợp lệ.');
+        }
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('Tải hình ảnh lên không thành công. Vui lòng thử lại.');
+        }
+
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            throw new Exception('Không tìm thấy file hình ảnh tải lên.');
+        }
+
+        $maxSize = 3 * 1024 * 1024;
+        $fileSize = (int) @filesize($file['tmp_name']);
+        if ($fileSize <= 0) {
+            throw new Exception('Hình ảnh tải lên không hợp lệ hoặc bị rỗng.');
+        }
+        if ($fileSize > $maxSize) {
+            throw new Exception('Hình ảnh không được vượt quá 3MB.');
+        }
+
+        $allowed = [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'webp' => 'image/webp',
+        ];
+
+        $originalName = (string) ($file['name'] ?? '');
+        $extension    = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        if (!isset($allowed[$extension])) {
+            throw new Exception('Hình ảnh chỉ chấp nhận định dạng JPG, JPEG, PNG hoặc WEBP.');
+        }
+
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        if ($mime !== $allowed[$extension]) {
+            throw new Exception('Nội dung file không đúng định dạng hình ảnh cho phép.');
+        }
+
+        if (@getimagesize($file['tmp_name']) === false) {
+            throw new Exception('File tải lên không phải là hình ảnh hợp lệ.');
+        }
+
+        $uploadDir = PATH_ASSETS_UPLOADS . 'products';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            throw new Exception('Không thể tạo thư mục lưu hình ảnh.');
+        }
+
+        // Đổi tên an toàn, tránh trùng lặp và không giữ tên gốc của người dùng
+        $safeName = 'product-' . bin2hex(random_bytes(8)) . '.' . $extension;
+
+        try {
+            return upload_file('products', [
+                'name'     => $safeName,
+                'tmp_name' => $file['tmp_name'],
+            ]);
+        } catch (Throwable $e) {
+            throw new Exception('Không thể lưu hình ảnh sản phẩm. Vui lòng thử lại.');
+        }
     }
 
     /**

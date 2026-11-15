@@ -77,9 +77,10 @@ class CategoryModel extends BaseModel
     /**
      * Lấy tất cả danh mục (danh sách đơn giản).
      *
+     * @param bool $useFallback Dùng dữ liệu mẫu khi CSDL trống (mặc định true)
      * @return array
      */
-    public function getAll()
+    public function getAll($useFallback = true)
     {
         try {
             $sql = 'SELECT * FROM ' . $this->table . ' ORDER BY categories_id ASC';
@@ -93,7 +94,30 @@ class CategoryModel extends BaseModel
             // Bỏ qua lỗi và trả về dữ liệu mẫu
         }
 
-        return $this->getDefaultCategories();
+        return $useFallback ? $this->getDefaultCategories() : [];
+    }
+
+    /**
+     * Kiểm tra danh mục có tồn tại thực sự trong CSDL hay không.
+     *
+     * Khác với getById(), phương thức này không dùng dữ liệu mẫu dự phòng,
+     * phù hợp để xác thực category_id trước khi thêm sản phẩm.
+     *
+     * @param int $id
+     * @return bool
+     */
+    public function exists($id)
+    {
+        try {
+            $sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE categories_id = :id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':id', (int) $id, PDO::PARAM_INT);
+            $statement->execute();
+
+            return (int) $statement->fetchColumn() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     /**
