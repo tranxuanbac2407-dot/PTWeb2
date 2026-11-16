@@ -57,8 +57,8 @@ class UserModel extends BaseModel
     }
 
     /**
-     * Thêm tài khoản mới, trả về id vừa tạo.
-     * $data gồm: full_name, username, email, phone, password (đã hash), role.
+     * ThA�m tA�i kho���n m��>i, tr��� v��? id v���a t���o.
+     * $data g��"m: full_name, username, email, phone, password (�`A� hash), role.
      */
     public function create(array $data)
     {
@@ -77,5 +77,42 @@ class UserModel extends BaseModel
         ]);
 
         return (int) $this->pdo->lastInsertId();
+    }
+
+    /**
+     * Lấy danh sách tài khoản cho trang quản trị (không bao gồm mật khẩu).
+     * Chỉ truy vấn các cột thực tế đang tồn tại trong bảng users.
+     *
+     * @return array
+     */
+    public function getAllForAdmin()
+    {
+        try {
+            $columnStatement = $this->pdo->query('SHOW COLUMNS FROM ' . $this->table);
+            $columns = $columnStatement ? $columnStatement->fetchAll(PDO::FETCH_COLUMN) : [];
+
+            $wantedColumns = ['id', 'full_name', 'username', 'email', 'phone', 'role'];
+            $selectColumns = [];
+
+            foreach ($wantedColumns as $column) {
+                if (in_array($column, $columns, true)) {
+                    $selectColumns[] = '`' . $column . '`';
+                }
+            }
+
+            if (empty($selectColumns)) {
+                return [];
+            }
+
+            $sql = 'SELECT ' . implode(', ', $selectColumns)
+                 . ' FROM ' . $this->table
+                 . ' ORDER BY `id` DESC';
+
+            $statement = $this->pdo->query($sql);
+
+            return $statement ? $statement->fetchAll() : [];
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 }

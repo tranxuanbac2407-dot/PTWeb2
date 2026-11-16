@@ -636,16 +636,22 @@ class AdminController extends BaseController
        ========================================================= */
 
     /**
-     * Trang quản lý tài khoản người dùng (khung giao diện, chờ nhiệm vụ CRUD).
+     * Trang quản lý tài khoản người dùng.
      */
     public function users()
     {
+        $userModel = new UserModel();
+        $users = $userModel->getAllForAdmin();
+
         $this->renderAdminPage(
             'users/index',
             'Quản lý tài khoản | Quản trị SPORTIX',
             'Quản lý tài khoản',
-            'Danh sách tài khoản người dùng của hệ thống.',
-            'users'
+            'Danh sách tài khoản đã đăng ký trên hệ thống.',
+            'users',
+            [
+                'users' => $users,
+            ]
         );
     }
 
