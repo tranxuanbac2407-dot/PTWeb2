@@ -50,7 +50,6 @@ $quickLinks = [
 <section class="admin-section">
     <div class="admin-section-heading">
         <h3>Thống kê tổng quan</h3>
-        <p>Số liệu thống kê sẽ được cập nhật khi chức năng báo cáo được hoàn thiện.</p>
     </div>
 
     <div class="row g-3 g-xl-4">
@@ -82,8 +81,8 @@ $quickLinks = [
                     <i class="bi bi-people" aria-hidden="true"></i>
                 </span>
                 <p class="admin-stat-label">Tổng số tài khoản</p>
-                <p class="admin-stat-value">&mdash;</p>
-                <p class="admin-stat-note">Chưa có dữ liệu thống kê</p>
+                <p class="admin-stat-value"><?= isset($totalUser) ? (int) $totalUser : '&mdash;' ?></p>
+                <p class="admin-stat-note"><?= isset($totalUser) ? 'Số tài khoản truy cập' : 'Chưa có dữ liệu thống kê' ?></p>
             </article>
         </div>
 
