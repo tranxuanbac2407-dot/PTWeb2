@@ -10,23 +10,27 @@ class BaseController
     /**
      * Bảo vệ khu vực Admin ở phía server.
      *
-     * - Chưa đăng nhập: chuyển về trang đăng nhập hiện có.
-     * - Đã đăng nhập nhưng role không phải 'admin': trả về 403, không cho xem nội dung.
+     * - Chưa đăng nhập / session không hợp lệ: chuyển về trang đăng nhập.
+     * - Đã đăng nhập nhưng role không phải 'admin': trả về 403.
      * - Hợp lệ: trả về thông tin người dùng trong session.
      */
     protected function requireAdmin()
     {
         $user = $_SESSION['user'] ?? null;
 
-        // 1) Chưa đăng nhập -> chuyển tới trang đăng nhập của website.
-        if (empty($user)) {
+        // Session cũ/không hợp lệ (ví dụ object __PHP_Incomplete_Class) -> coi như chưa đăng nhập.
+        if ($user instanceof __PHP_Incomplete_Class || is_object($user)) {
+            unset($_SESSION['user']);
+            $user = null;
+        }
+
+        if (empty($user) || !is_array($user)) {
             $this->setFlash('error', 'Vui lòng đăng nhập với tài khoản Admin để tiếp tục.');
             header('Location: ' . BASE_URL . '?action=login');
             exit;
         }
 
-        // 2) Đã đăng nhập nhưng không phải Admin -> từ chối truy cập.
-        if (!is_array($user) || ($user['role'] ?? '') !== 'admin') {
+        if (($user['role'] ?? '') !== 'admin') {
             http_response_code(403);
 
             $title = 'Không có quyền truy cập | SPORTIX';
@@ -36,7 +40,6 @@ class BaseController
             exit;
         }
 
-        // Đánh dấu phiên hiện tại đã đi qua kiểm tra quyền Admin.
         if (!defined('SPORTIX_ADMIN_AREA')) {
             define('SPORTIX_ADMIN_AREA', true);
         }
@@ -86,8 +89,8 @@ class BaseController
     /**
      * Lưu thông báo flash vào session (hiển thị 1 lần duy nhất).
      *
-     * @param string $type Loại thông báo (success, error, warning, info)
-     * @param string $message Nội dung thông báo
+     * @param string $type
+     * @param string $message
      */
     protected function setFlash($type, $message)
     {

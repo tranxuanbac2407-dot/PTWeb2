@@ -1,10 +1,22 @@
 <?php
 require_once __DIR__ . '/../partials/guard.php';
 
-$adminUser = $adminUser ?? ($_SESSION['user'] ?? []);
-$adminName = $adminUser['username'] ?? 'Admin';
-$adminRole = $adminUser['role'] ?? 'admin';
-$initial   = strtoupper(substr((string) $adminName, 0, 1));
+$sessionUser = $_SESSION['user'] ?? null;
+if ($sessionUser instanceof __PHP_Incomplete_Class || is_object($sessionUser)) {
+    unset($_SESSION['user']);
+    $sessionUser = null;
+}
+if (!is_array($adminUser ?? null)) {
+    $adminUser = is_array($sessionUser) ? $sessionUser : [];
+}
+
+$adminName = isset($adminUser['username']) && is_scalar($adminUser['username'])
+    ? (string) $adminUser['username']
+    : 'Admin';
+$adminRole = isset($adminUser['role']) && is_scalar($adminUser['role'])
+    ? (string) $adminUser['role']
+    : 'admin';
+$initial   = strtoupper(substr($adminName, 0, 1));
 ?>
 
 <header class="admin-header">
