@@ -15,9 +15,11 @@ class AdminController extends BaseController
     {
         $categoryModel = new CategoryModel();
         $productModel  = new ProductModel();
+        $userModel     = new UserModel();
 
         $totalCategories = count($categoryModel->getAll());
         $totalProducts   = $productModel->countAll();
+        $totalUser       = $userModel->countAll();
 
         $this->renderAdminPage(
             'dashboard',
@@ -28,6 +30,7 @@ class AdminController extends BaseController
             [
                 'totalCategories' => $totalCategories,
                 'totalProducts'   => $totalProducts,
+                'totalUser'       => $totalUser,
             ]
         );
     }

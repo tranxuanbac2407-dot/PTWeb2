@@ -115,4 +115,22 @@ class UserModel extends BaseModel
             return [];
         }
     }
+
+    /**
+     * Đếm tổng số tài khoản trong hệ thống.
+     *
+     * @return int
+     */
+    public function countAll()
+    {
+        try {
+            $sql = 'SELECT COUNT(*) AS total FROM ' . $this->table;
+            $statement = $this->pdo->query($sql);
+            $row = $statement ? $statement->fetch() : null;
+
+            return isset($row['total']) ? (int) $row['total'] : 0;
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
 }
