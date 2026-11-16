@@ -264,9 +264,17 @@ class AdminController extends BaseController
 
         $keyword    = trim($_GET['keyword'] ?? '');
         $categoryId = (int) ($_GET['category_id'] ?? 0);
+        $products   = [];
+        $categories = [];
+        $loadError  = null;
 
-        $products     = $productModel->getAllAdmin($keyword, $categoryId);
-        $categories   = $categoryModel->getAll();
+        try {
+            $products   = $productModel->getAllAdmin($keyword, $categoryId);
+            $categories = $categoryModel->getAll();
+        } catch (Throwable $e) {
+            $loadError = 'Không thể tải danh sách sản phẩm từ cơ sở dữ liệu. Vui lòng thử lại sau.';
+        }
+
         $flashSuccess = $this->getFlash('success');
         $flashError   = $this->getFlash('error');
 
@@ -281,6 +289,7 @@ class AdminController extends BaseController
                 'categories'   => $categories,
                 'keyword'      => $keyword,
                 'categoryId'   => $categoryId,
+                'loadError'    => $loadError,
                 'flashSuccess' => $flashSuccess,
                 'flashError'   => $flashError,
             ]
@@ -347,16 +356,17 @@ class AdminController extends BaseController
                 $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
             }
 
-            // 6. Xử lý ảnh tải lên hoặc URL ảnh
+            // 6. Xử lý ảnh tải lên hoặc URL ảnh (hỗ trợ cả input image_file lẫn image)
             $finalImage = null;
-            $imgError = null;
+            $imgError   = null;
+            $uploadItem = $_FILES['image_file'] ?? $_FILES['image'] ?? null;
 
-            if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] !== UPLOAD_ERR_NO_FILE) {
-                if (!is_valid_image_upload($_FILES['image_file'], $imgError)) {
+            if ($uploadItem && isset($uploadItem['error']) && $uploadItem['error'] !== UPLOAD_ERR_NO_FILE) {
+                if (!is_valid_image_upload($uploadItem, $imgError)) {
                     $errors['image'] = $imgError;
                 } else {
                     try {
-                        $finalImage = upload_file('products', $_FILES['image_file']);
+                        $finalImage = upload_file('products', $uploadItem);
                     } catch (Exception $e) {
                         $errors['image'] = $e->getMessage();
                     }
@@ -489,19 +499,20 @@ class AdminController extends BaseController
             $finalImage = $product['image'] ?? null;
             $newUploadedFile = null;
             $shouldDeleteOldFile = false;
+            $uploadItem = $_FILES['image_file'] ?? $_FILES['image'] ?? null;
 
             if ($deleteImage) {
                 // Người dùng chọn xóa ảnh hiện tại
                 $finalImage = null;
                 $shouldDeleteOldFile = true;
-            } elseif (isset($_FILES['image_file']) && $_FILES['image_file']['error'] !== UPLOAD_ERR_NO_FILE) {
+            } elseif ($uploadItem && isset($uploadItem['error']) && $uploadItem['error'] !== UPLOAD_ERR_NO_FILE) {
                 // Người dùng tải tệp ảnh mới lên từ máy
                 $imgError = null;
-                if (!is_valid_image_upload($_FILES['image_file'], $imgError)) {
+                if (!is_valid_image_upload($uploadItem, $imgError)) {
                     $errors['image'] = $imgError;
                 } else {
                     try {
-                        $newUploadedFile = upload_file('products', $_FILES['image_file']);
+                        $newUploadedFile = upload_file('products', $uploadItem);
                         $finalImage = $newUploadedFile;
                         $shouldDeleteOldFile = true;
                     } catch (Exception $e) {
@@ -606,6 +617,18 @@ class AdminController extends BaseController
         }
 
         $this->redirect('?action=admin-products');
+    }
+
+    /**
+     * Kiểm tra và lưu file hình ảnh sản phẩm vào assets/uploads/products.
+     *
+     * @param array $file Một phần tử trong $_FILES
+     * @return string Đường dẫn tương đối lưu trong cột products.image
+     * @throws Exception Khi file không hợp lệ hoặc lưu thất bại
+     */
+    private function storeProductImage(array $file)
+    {
+        return upload_file('products', $file);
     }
 
     /* =========================================================

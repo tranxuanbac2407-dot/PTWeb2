@@ -5,6 +5,19 @@ class ProductModel extends BaseModel
     protected $table = 'products';
 
     /**
+     * Lấy toàn bộ sản phẩm kèm tên danh mục (phục vụ trang quản lý Admin).
+     *
+     * Không dùng dữ liệu mẫu: nếu truy vấn thất bại, PDOException sẽ được ném ra
+     * để Controller hiển thị thông báo tải dữ liệu thất bại.
+     *
+     * @return array
+     */
+    public function getAllWithCategory($keyword = null, $categoryId = null)
+    {
+        return $this->getAllAdmin($keyword, $categoryId);
+    }
+
+    /**
      * Tìm kiếm sản phẩm theo từ khóa.
      *
      * @param string $keyword

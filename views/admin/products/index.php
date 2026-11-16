@@ -5,13 +5,15 @@ $keyword      = $keyword ?? '';
 $categoryId   = (int) ($categoryId ?? 0);
 $products     = $products ?? [];
 $categories   = $categories ?? [];
+$loadError    = $loadError ?? null;
 $flashSuccess = $flashSuccess ?? null;
 $flashError   = $flashError ?? null;
+$total        = count($products);
 ?>
 
 <div class="admin-product-page">
 
-    <!-- Thông báo kết quả thao tác -->
+    <!-- Thông báo kết quả thao tác & lỗi tải -->
     <?php if (!empty($flashSuccess)): ?>
         <div class="admin-alert admin-alert-success" role="alert">
             <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
@@ -23,6 +25,13 @@ $flashError   = $flashError ?? null;
         <div class="admin-alert admin-alert-danger" role="alert">
             <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
             <span><?= htmlspecialchars($flashError, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($loadError)): ?>
+        <div class="admin-alert admin-alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <span><?= htmlspecialchars($loadError, ENT_QUOTES, 'UTF-8') ?></span>
         </div>
     <?php endif; ?>
 
@@ -91,7 +100,7 @@ $flashError   = $flashError ?? null;
             <h3>
                 <i class="bi bi-box-seam" aria-hidden="true"></i>
                 <span>Danh sách sản phẩm</span>
-                <span class="admin-count-badge"><?= count($products) ?> sản phẩm</span>
+                <span class="admin-count-badge"><?= $total ?> sản phẩm</span>
             </h3>
 
             <div class="admin-filter-badges">
@@ -105,8 +114,8 @@ $flashError   = $flashError ?? null;
                     <?php
                         $filteredCatName = '';
                         foreach ($categories as $c) {
-                            if ((int) $c['categories_id'] === $categoryId) {
-                                $filteredCatName = $c['categories_name'];
+                            if ((int) ($c['categories_id'] ?? 0) === $categoryId) {
+                                $filteredCatName = $c['categories_name'] ?? '';
                                 break;
                             }
                         }
