@@ -71,8 +71,8 @@ $quickLinks = [
                     <i class="bi bi-box-seam" aria-hidden="true"></i>
                 </span>
                 <p class="admin-stat-label">Tổng số sản phẩm</p>
-                <p class="admin-stat-value">&mdash;</p>
-                <p class="admin-stat-note">Chưa có dữ liệu thống kê</p>
+                <p class="admin-stat-value"><?= isset($totalProducts) ? (int) $totalProducts : '&mdash;' ?></p>
+                <p class="admin-stat-note"><?= isset($totalProducts) ? 'Sản phẩm trong kho' : 'Chưa có dữ liệu thống kê' ?></p>
             </article>
         </div>
 

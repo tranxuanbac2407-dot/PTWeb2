@@ -19,6 +19,8 @@ match ($action) {
     'admin-category-delete' => (new AdminController)->categoryDelete(),
     'admin-products'        => (new AdminController)->products(),
     'admin-product-create'  => (new AdminController)->productCreate(),
+    'admin-product-edit'    => (new AdminController)->productEdit(),
+    'admin-product-delete'  => (new AdminController)->productDelete(),
     'admin-users'           => (new AdminController)->users(),
     'admin-orders'          => (new AdminController)->orders(),
 

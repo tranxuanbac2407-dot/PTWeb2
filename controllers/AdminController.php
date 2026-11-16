@@ -14,7 +14,10 @@ class AdminController extends BaseController
     public function dashboard()
     {
         $categoryModel = new CategoryModel();
+        $productModel  = new ProductModel();
+
         $totalCategories = count($categoryModel->getAll());
+        $totalProducts   = $productModel->countAll();
 
         $this->renderAdminPage(
             'dashboard',
@@ -24,6 +27,7 @@ class AdminController extends BaseController
             'dashboard',
             [
                 'totalCategories' => $totalCategories,
+                'totalProducts'   => $totalProducts,
             ]
         );
     }
@@ -247,22 +251,26 @@ class AdminController extends BaseController
     }
 
     /* =========================================================
-       CÁC TRANG QUẢN TRỊ KHÁC
+       QUẢN LÝ SẢN PHẨM (CRUD & QUẢN LÝ ẢNH)
        ========================================================= */
 
     /**
-     * Danh sách sản phẩm trong khu vực quản trị.
+     * Danh sách sản phẩm (hỗ trợ tìm kiếm từ khóa và lọc theo danh mục).
      */
     public function products()
     {
-        $this->requireAdmin();
+        $productModel  = new ProductModel();
+        $categoryModel = new CategoryModel();
 
-        $productModel = new ProductModel();
-        $products     = [];
-        $loadError    = null;
+        $keyword    = trim($_GET['keyword'] ?? '');
+        $categoryId = (int) ($_GET['category_id'] ?? 0);
+        $products   = [];
+        $categories = [];
+        $loadError  = null;
 
         try {
-            $products = $productModel->getAllWithCategory();
+            $products   = $productModel->getAllAdmin($keyword, $categoryId);
+            $categories = $categoryModel->getAll();
         } catch (Throwable $e) {
             $loadError = 'Không thể tải danh sách sản phẩm từ cơ sở dữ liệu. Vui lòng thử lại sau.';
         }
@@ -274,10 +282,13 @@ class AdminController extends BaseController
             'products/index',
             'Quản lý sản phẩm | Quản trị SPORTIX',
             'Quản lý sản phẩm',
-            'Danh sách sản phẩm đang kinh doanh tại SPORTIX.',
+            'Danh sách sản phẩm thể thao đang kinh doanh tại SPORTIX.',
             'products',
             [
                 'products'     => $products,
+                'categories'   => $categories,
+                'keyword'      => $keyword,
+                'categoryId'   => $categoryId,
                 'loadError'    => $loadError,
                 'flashSuccess' => $flashSuccess,
                 'flashError'   => $flashError,
@@ -286,142 +297,326 @@ class AdminController extends BaseController
     }
 
     /**
-     * Thêm mới sản phẩm (GET: hiển thị form, POST: xử lý lưu).
+     * Thêm mới sản phẩm (GET: hiển thị form, POST: xử lý lưu kèm upload ảnh).
      */
     public function productCreate()
     {
-        $this->requireAdmin();
-
         $productModel  = new ProductModel();
         $categoryModel = new CategoryModel();
+        $categories    = $categoryModel->getAll();
 
         $errors = [];
         $old = [
             'product_name'   => '',
-            'category_id'    => '',
+            'category_id'    => 0,
             'price'          => '',
-            'description'    => '',
             'size'           => '',
             'color'          => '',
-            'stock_quantity' => '',
+            'stock_quantity' => 0,
+            'description'    => '',
+            'image_url'      => '',
         ];
-
-        $categories = $categoryModel->getAll(false);
-        $flashError = $this->getFlash('error');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $old['product_name']   = trim($_POST['product_name'] ?? '');
-            $old['category_id']    = trim($_POST['category_id'] ?? '');
+            $old['category_id']    = (int) ($_POST['category_id'] ?? 0);
             $old['price']          = trim($_POST['price'] ?? '');
-            $old['description']    = trim($_POST['description'] ?? '');
             $old['size']           = trim($_POST['size'] ?? '');
             $old['color']          = trim($_POST['color'] ?? '');
-            $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '');
+            $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '0');
+            $old['description']    = trim($_POST['description'] ?? '');
+            $old['image_url']      = trim($_POST['image_url'] ?? '');
 
             // 1. Kiểm tra CSRF
             if (!$this->csrfValid()) {
-                $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
+                $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';
             }
 
-            // 2. Tên sản phẩm
+            // 2. Validate tên sản phẩm
             if ($old['product_name'] === '') {
                 $errors['product_name'] = 'Vui lòng nhập tên sản phẩm.';
             } elseif (mb_strlen($old['product_name']) > 200) {
                 $errors['product_name'] = 'Tên sản phẩm không được vượt quá 200 ký tự.';
             }
 
-            // 3. Danh mục phải tồn tại trong CSDL
-            $categoryId = filter_var($old['category_id'], FILTER_VALIDATE_INT, [
-                'options' => ['min_range' => 1],
-            ]);
-            if ($categoryId === false) {
-                $errors['category_id'] = 'Vui lòng chọn danh mục sản phẩm.';
-            } elseif (!$categoryModel->exists($categoryId)) {
-                $errors['category_id'] = 'Danh mục đã chọn không tồn tại. Vui lòng chọn danh mục khác.';
+            // 3. Validate danh mục
+            if ($old['category_id'] <= 0) {
+                $errors['category_id'] = 'Vui lòng chọn danh mục cho sản phẩm.';
             }
 
-            // 4. Giá bán: số hợp lệ, lớn hơn 0
-            if ($old['price'] === '' || !is_numeric($old['price'])) {
-                $errors['price'] = 'Giá bán phải là số hợp lệ.';
-            } elseif ((float) $old['price'] <= 0) {
-                $errors['price'] = 'Giá bán phải lớn hơn 0.';
-            } elseif ((float) $old['price'] > 9999999999.99) {
-                $errors['price'] = 'Giá bán vượt quá giới hạn cho phép.';
+            // 4. Validate giá bán
+            if ($old['price'] === '') {
+                $errors['price'] = 'Vui lòng nhập đơn giá sản phẩm.';
+            } elseif (!is_numeric($old['price']) || (float) $old['price'] < 0) {
+                $errors['price'] = 'Giá bán phải là số hợp lệ và lớn hơn hoặc bằng 0.';
             }
 
-            // 5. Số lượng tồn kho: số nguyên không âm
-            $stock = filter_var($old['stock_quantity'], FILTER_VALIDATE_INT, [
-                'options' => ['min_range' => 0],
-            ]);
-            if ($stock === false) {
+            // 5. Validate số lượng tồn kho
+            if ($old['stock_quantity'] === '' || !is_numeric($old['stock_quantity']) || (int) $old['stock_quantity'] < 0) {
                 $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
             }
 
-            // 6. Kích thước / màu sắc không vượt quá độ dài cột
-            if (mb_strlen($old['size']) > 50) {
-                $errors['size'] = 'Kích thước không được vượt quá 50 ký tự.';
-            }
-            if (mb_strlen($old['color']) > 50) {
-                $errors['color'] = 'Màu sắc không được vượt quá 50 ký tự.';
-            }
+            // 6. Xử lý ảnh tải lên hoặc URL ảnh (hỗ trợ cả input image_file lẫn image)
+            $finalImage = null;
+            $imgError   = null;
+            $uploadItem = $_FILES['image_file'] ?? $_FILES['image'] ?? null;
 
-            // 7. Hình ảnh (không bắt buộc)
-            $imagePath = null;
-            $hasUpload = isset($_FILES['image'])
-                && is_array($_FILES['image'])
-                && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
-
-            if (empty($errors) && $hasUpload) {
-                try {
-                    $imagePath = $this->storeProductImage($_FILES['image']);
-                } catch (Throwable $e) {
-                    $errors['image'] = $e->getMessage();
+            if ($uploadItem && isset($uploadItem['error']) && $uploadItem['error'] !== UPLOAD_ERR_NO_FILE) {
+                if (!is_valid_image_upload($uploadItem, $imgError)) {
+                    $errors['image'] = $imgError;
+                } else {
+                    try {
+                        $finalImage = upload_file('products', $uploadItem);
+                    } catch (Exception $e) {
+                        $errors['image'] = $e->getMessage();
+                    }
                 }
+            } elseif ($old['image_url'] !== '') {
+                $finalImage = $old['image_url'];
             }
 
-            // 8. Lưu sản phẩm khi dữ liệu hợp lệ
+            // 7. Nếu không có lỗi, tiến hành lưu vào CSDL
             if (empty($errors)) {
-                $created = $productModel->create([
-                    'category_id'    => (int) $categoryId,
+                $newId = $productModel->create([
                     'product_name'   => $old['product_name'],
+                    'category_id'    => $old['category_id'],
                     'price'          => (float) $old['price'],
-                    'description'    => $old['description'],
-                    'image'          => $imagePath,
-                    'size'           => $old['size'],
-                    'color'          => $old['color'],
-                    'stock_quantity' => (int) $stock,
+                    'size'           => $old['size'] !== '' ? $old['size'] : null,
+                    'color'          => $old['color'] !== '' ? $old['color'] : null,
+                    'stock_quantity' => (int) $old['stock_quantity'],
+                    'description'    => $old['description'] !== '' ? $old['description'] : null,
+                    'image'          => $finalImage,
                 ]);
 
-                if ($created !== false) {
-                    $this->setFlash('success', 'Thêm sản phẩm "' . $old['product_name'] . '" thành công!');
+                if ($newId !== false) {
+                    $this->setFlash('success', 'Thêm sản phẩm "' . htmlspecialchars($old['product_name']) . '" thành công!');
                     $this->redirect('?action=admin-products');
+                } else {
+                    // Nếu lưu thất bại mà đã upload ảnh thì dọn dẹp file vừa upload
+                    if (!empty($finalImage)) {
+                        delete_upload_file($finalImage);
+                    }
+                    $errors['general'] = 'Không thể lưu sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại sau.';
                 }
-
-                // Dọn file vừa upload nếu INSERT thất bại
-                if (!empty($imagePath)) {
-                    @unlink(PATH_ASSETS_UPLOADS . str_replace('/', DIRECTORY_SEPARATOR, $imagePath));
-                }
-
-                $errors['general'] = 'Không thể lưu sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại sau.';
             }
         }
 
-        $csrfToken = $this->csrfToken();
+        $csrfToken  = $this->csrfToken();
+        $flashError = $this->getFlash('error');
 
         $this->renderAdminPage(
-            'products/create',
+            'products/form',
             'Thêm sản phẩm mới | Quản trị SPORTIX',
             'Thêm sản phẩm mới',
-            'Tạo mới sản phẩm thể thao cho cửa hàng.',
+            'Nhập thông tin sản phẩm và tải ảnh lên hệ thống.',
             'products',
             [
-                'categories'  => $categories,
-                'old'         => $old,
-                'errors'      => $errors,
-                'csrfToken'   => $csrfToken,
-                'flashError'  => $flashError,
+                'isEdit'     => false,
+                'product'    => null,
+                'categories' => $categories,
+                'old'        => $old,
+                'errors'     => $errors,
+                'csrfToken'  => $csrfToken,
+                'flashError' => $flashError,
             ]
         );
+    }
+
+    /**
+     * Chỉnh sửa và cập nhật sản phẩm (hỗ trợ quản lý, thay đổi và xóa ảnh).
+     */
+    public function productEdit()
+    {
+        $productModel  = new ProductModel();
+        $categoryModel = new CategoryModel();
+        $categories    = $categoryModel->getAll();
+
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã sản phẩm không hợp lệ.');
+            $this->redirect('?action=admin-products');
+        }
+
+        $product = $productModel->getById($id);
+        if (!$product) {
+            $this->setFlash('error', 'Không tìm thấy sản phẩm yêu cầu hoặc đã bị xóa.');
+            $this->redirect('?action=admin-products');
+        }
+
+        $errors = [];
+        $old = [
+            'product_name'   => $product['product_name'] ?? '',
+            'category_id'    => (int) ($product['category_id'] ?? 0),
+            'price'          => $product['price'] ?? '',
+            'size'           => $product['size'] ?? '',
+            'color'          => $product['color'] ?? '',
+            'stock_quantity' => $product['stock_quantity'] ?? 0,
+            'description'    => $product['description'] ?? '',
+            'image_url'      => (isset($product['image']) && (str_starts_with($product['image'], 'http://') || str_starts_with($product['image'], 'https://'))) ? $product['image'] : '',
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $old['product_name']   = trim($_POST['product_name'] ?? '');
+            $old['category_id']    = (int) ($_POST['category_id'] ?? 0);
+            $old['price']          = trim($_POST['price'] ?? '');
+            $old['size']           = trim($_POST['size'] ?? '');
+            $old['color']          = trim($_POST['color'] ?? '');
+            $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '0');
+            $old['description']    = trim($_POST['description'] ?? '');
+            $old['image_url']      = trim($_POST['image_url'] ?? '');
+            $deleteImage           = !empty($_POST['delete_image']);
+
+            // 1. Kiểm tra CSRF
+            if (!$this->csrfValid()) {
+                $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';
+            }
+
+            // 2. Validate tên sản phẩm
+            if ($old['product_name'] === '') {
+                $errors['product_name'] = 'Vui lòng nhập tên sản phẩm.';
+            } elseif (mb_strlen($old['product_name']) > 200) {
+                $errors['product_name'] = 'Tên sản phẩm không được vượt quá 200 ký tự.';
+            }
+
+            // 3. Validate danh mục
+            if ($old['category_id'] <= 0) {
+                $errors['category_id'] = 'Vui lòng chọn danh mục hợp lệ.';
+            }
+
+            // 4. Validate giá bán
+            if ($old['price'] === '') {
+                $errors['price'] = 'Vui lòng nhập đơn giá sản phẩm.';
+            } elseif (!is_numeric($old['price']) || (float) $old['price'] < 0) {
+                $errors['price'] = 'Giá bán phải là số hợp lệ và lớn hơn hoặc bằng 0.';
+            }
+
+            // 5. Validate số lượng tồn kho
+            if ($old['stock_quantity'] === '' || !is_numeric($old['stock_quantity']) || (int) $old['stock_quantity'] < 0) {
+                $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
+            }
+
+            // 6. Xử lý quản lý và cập nhật ảnh sản phẩm
+            $finalImage = $product['image'] ?? null;
+            $newUploadedFile = null;
+            $shouldDeleteOldFile = false;
+            $uploadItem = $_FILES['image_file'] ?? $_FILES['image'] ?? null;
+
+            if ($deleteImage) {
+                // Người dùng chọn xóa ảnh hiện tại
+                $finalImage = null;
+                $shouldDeleteOldFile = true;
+            } elseif ($uploadItem && isset($uploadItem['error']) && $uploadItem['error'] !== UPLOAD_ERR_NO_FILE) {
+                // Người dùng tải tệp ảnh mới lên từ máy
+                $imgError = null;
+                if (!is_valid_image_upload($uploadItem, $imgError)) {
+                    $errors['image'] = $imgError;
+                } else {
+                    try {
+                        $newUploadedFile = upload_file('products', $uploadItem);
+                        $finalImage = $newUploadedFile;
+                        $shouldDeleteOldFile = true;
+                    } catch (Exception $e) {
+                        $errors['image'] = $e->getMessage();
+                    }
+                }
+            } elseif ($old['image_url'] !== '' && $old['image_url'] !== ($product['image'] ?? '')) {
+                // Người dùng nhập link URL ảnh mới
+                $finalImage = $old['image_url'];
+                $shouldDeleteOldFile = true;
+            }
+
+            // 7. Cập nhật vào CSDL nếu không có lỗi
+            if (empty($errors)) {
+                $updated = $productModel->update($id, [
+                    'product_name'   => $old['product_name'],
+                    'category_id'    => $old['category_id'],
+                    'price'          => (float) $old['price'],
+                    'size'           => $old['size'] !== '' ? $old['size'] : null,
+                    'color'          => $old['color'] !== '' ? $old['color'] : null,
+                    'stock_quantity' => (int) $old['stock_quantity'],
+                    'description'    => $old['description'] !== '' ? $old['description'] : null,
+                    'image'          => $finalImage,
+                ]);
+
+                if ($updated !== false) {
+                    // Nếu cập nhật thành công và cần dọn dẹp ảnh cũ
+                    if ($shouldDeleteOldFile && !empty($product['image'])) {
+                        delete_upload_file($product['image']);
+                    }
+
+                    $this->setFlash('success', 'Cập nhật sản phẩm #' . $id . ' thành công!');
+                    $this->redirect('?action=admin-products');
+                } else {
+                    // Nếu lỗi CSDL và vừa upload ảnh mới, dọn dẹp file vừa upload
+                    if ($newUploadedFile) {
+                        delete_upload_file($newUploadedFile);
+                    }
+                    $errors['general'] = 'Không thể cập nhật sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại.';
+                }
+            }
+        }
+
+        $csrfToken  = $this->csrfToken();
+        $flashError = $this->getFlash('error');
+
+        $this->renderAdminPage(
+            'products/form',
+            'Chỉnh sửa sản phẩm #' . $id . ' | Quản trị SPORTIX',
+            'Chỉnh sửa sản phẩm',
+            'Cập nhật thông tin, giá bán và hình ảnh: ' . htmlspecialchars($product['product_name'] ?? ''),
+            'products',
+            [
+                'isEdit'     => true,
+                'product'    => $product,
+                'categories' => $categories,
+                'old'        => $old,
+                'errors'     => $errors,
+                'csrfToken'  => $csrfToken,
+                'flashError' => $flashError,
+            ]
+        );
+    }
+
+    /**
+     * Xóa sản phẩm (kiểm tra đơn hàng liên kết và tự động xóa ảnh trên đĩa).
+     */
+    public function productDelete()
+    {
+        $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã sản phẩm không hợp lệ.');
+            $this->redirect('?action=admin-products');
+        }
+
+        $productModel = new ProductModel();
+        $product = $productModel->getById($id);
+
+        if (!$product) {
+            $this->setFlash('error', 'Sản phẩm không tồn tại hoặc đã bị xóa trước đó.');
+            $this->redirect('?action=admin-products');
+        }
+
+        // Kiểm tra ràng buộc khóa ngoại với đơn hàng
+        $orderCount = $productModel->countInOrders($id);
+        if ($orderCount > 0) {
+            $this->setFlash('error', 'Không thể xóa sản phẩm "' . htmlspecialchars($product['product_name']) . '" vì đang nằm trong ' . $orderCount . ' đơn hàng của khách hàng!');
+            $this->redirect('?action=admin-products');
+        }
+
+        // Thực hiện xóa sản phẩm
+        $deleted = $productModel->delete($id);
+        if ($deleted) {
+            // Tự động xóa file ảnh vật lý trên máy chủ nếu là ảnh upload nội bộ
+            if (!empty($product['image'])) {
+                delete_upload_file($product['image']);
+            }
+            $this->setFlash('success', 'Đã xóa sản phẩm "' . htmlspecialchars($product['product_name']) . '" (ID: #' . $id . ') thành công!');
+        } else {
+            $this->setFlash('error', 'Không thể xóa sản phẩm do ràng buộc dữ liệu hoặc lỗi hệ thống.');
+        }
+
+        $this->redirect('?action=admin-products');
     }
 
     /**
@@ -433,67 +628,12 @@ class AdminController extends BaseController
      */
     private function storeProductImage(array $file)
     {
-        if (!isset($file['error']) || is_array($file['error'])) {
-            throw new Exception('Dữ liệu hình ảnh không hợp lệ.');
-        }
-
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('Tải hình ảnh lên không thành công. Vui lòng thử lại.');
-        }
-
-        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-            throw new Exception('Không tìm thấy file hình ảnh tải lên.');
-        }
-
-        $maxSize = 3 * 1024 * 1024;
-        $fileSize = (int) @filesize($file['tmp_name']);
-        if ($fileSize <= 0) {
-            throw new Exception('Hình ảnh tải lên không hợp lệ hoặc bị rỗng.');
-        }
-        if ($fileSize > $maxSize) {
-            throw new Exception('Hình ảnh không được vượt quá 3MB.');
-        }
-
-        $allowed = [
-            'jpg'  => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'png'  => 'image/png',
-            'webp' => 'image/webp',
-        ];
-
-        $originalName = (string) ($file['name'] ?? '');
-        $extension    = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-
-        if (!isset($allowed[$extension])) {
-            throw new Exception('Hình ảnh chỉ chấp nhận định dạng JPG, JPEG, PNG hoặc WEBP.');
-        }
-
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-        if ($mime !== $allowed[$extension]) {
-            throw new Exception('Nội dung file không đúng định dạng hình ảnh cho phép.');
-        }
-
-        if (@getimagesize($file['tmp_name']) === false) {
-            throw new Exception('File tải lên không phải là hình ảnh hợp lệ.');
-        }
-
-        $uploadDir = PATH_ASSETS_UPLOADS . 'products';
-        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
-            throw new Exception('Không thể tạo thư mục lưu hình ảnh.');
-        }
-
-        // Đổi tên an toàn, tránh trùng lặp và không giữ tên gốc của người dùng
-        $safeName = 'product-' . bin2hex(random_bytes(8)) . '.' . $extension;
-
-        try {
-            return upload_file('products', [
-                'name'     => $safeName,
-                'tmp_name' => $file['tmp_name'],
-            ]);
-        } catch (Throwable $e) {
-            throw new Exception('Không thể lưu hình ảnh sản phẩm. Vui lòng thử lại.');
-        }
+        return upload_file('products', $file);
     }
+
+    /* =========================================================
+       CÁC TRANG QUẢN TRỊ KHÁC
+       ========================================================= */
 
     /**
      * Trang quản lý tài khoản người dùng (khung giao diện, chờ nhiệm vụ CRUD).
