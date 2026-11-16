@@ -645,6 +645,8 @@ class AdminController extends BaseController
     {
         $userModel = new UserModel();
         $users = $userModel->getAllForAdmin();
+        $flashSuccess = $this->getFlash('success');
+        $flashError   = $this->getFlash('error');
 
         $this->renderAdminPage(
             'users/index',
@@ -653,7 +655,97 @@ class AdminController extends BaseController
             'Danh sách tài khoản đã đăng ký trên hệ thống.',
             'users',
             [
-                'users' => $users,
+                'users'        => $users,
+                'flashSuccess' => $flashSuccess,
+                'flashError'   => $flashError,
+                'csrfToken'    => $this->csrfToken(),
+            ]
+        );
+    }
+
+    /**
+     * Xác nhận và xóa tài khoản khách hàng (GET: hiển thị xác nhận, POST: thực hiện xóa).
+     */
+    public function userDelete()
+    {
+        $userModel = new UserModel();
+        $id = (int) ($_REQUEST['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->setFlash('error', 'ID tài khoản không hợp lệ.');
+            $this->redirect('?action=admin-users');
+        }
+
+        $targetUser = $userModel->findById($id);
+
+        if (!$targetUser) {
+            $this->setFlash('error', 'Tài khoản không tồn tại hoặc đã bị xóa.');
+            $this->redirect('?action=admin-users');
+        }
+
+        // Chỉ cho phép thao tác với tài khoản khách hàng; tuyệt đối không xóa admin.
+        if (($targetUser['role'] ?? '') === 'admin') {
+            $this->setFlash('error', 'Không thể xóa tài khoản quản trị viên (Admin).');
+            $this->redirect('?action=admin-users');
+        }
+
+        if (($targetUser['role'] ?? '') !== 'client') {
+            $this->setFlash('error', 'Chỉ được phép xóa tài khoản khách hàng.');
+            $this->redirect('?action=admin-users');
+        }
+
+        // Không cho phép xóa bằng GET.
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!$this->csrfValid()) {
+                $this->setFlash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+                $this->redirect('?action=admin-users');
+            }
+
+            // Kiểm tra lại dữ liệu thực tế từ database trước khi xóa.
+            $currentUser = $userModel->findById($id);
+            if (!$currentUser) {
+                $this->setFlash('error', 'Tài khoản không tồn tại hoặc đã bị xóa.');
+                $this->redirect('?action=admin-users');
+            }
+
+            if (($currentUser['role'] ?? '') === 'admin') {
+                $this->setFlash('error', 'Không thể xóa tài khoản quản trị viên (Admin).');
+                $this->redirect('?action=admin-users');
+            }
+
+            if (($currentUser['role'] ?? '') !== 'client') {
+                $this->setFlash('error', 'Chỉ được phép xóa tài khoản khách hàng.');
+                $this->redirect('?action=admin-users');
+            }
+
+            if ($userModel->hasOrders($id)) {
+                $this->setFlash('error', 'Không thể xóa tài khoản này vì khách hàng đã có đơn hàng trên hệ thống.');
+                $this->redirect('?action=admin-users');
+            }
+
+            $deleted = $userModel->deleteCustomerById($id);
+            if ($deleted) {
+                $this->setFlash('success', 'Xóa tài khoản khách hàng thành công.');
+            } else {
+                $this->setFlash('error', 'Không thể xóa tài khoản. Vui lòng kiểm tra lại điều kiện xóa.');
+            }
+
+            $this->redirect('?action=admin-users');
+        }
+
+        $csrfToken  = $this->csrfToken();
+        $flashError = $this->getFlash('error');
+
+        $this->renderAdminPage(
+            'users/delete',
+            'Xác nhận xóa tài khoản | Quản trị SPORTIX',
+            'Xác nhận xóa tài khoản',
+            'Kiểm tra thông tin trước khi xóa tài khoản khách hàng.',
+            'users',
+            [
+                'targetUser' => $targetUser,
+                'csrfToken'  => $csrfToken,
+                'flashError' => $flashError,
             ]
         );
     }
