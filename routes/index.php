@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 $action = $_GET['action'] ?? '/';
 
@@ -22,6 +22,7 @@ match ($action) {
     'admin-product-edit'    => (new AdminController)->productEdit(),
     'admin-product-delete'  => (new AdminController)->productDelete(),
     'admin-users'           => (new AdminController)->users(),
+    'admin-user-delete'     => (new AdminController)->userDelete(),
     'admin-orders'          => (new AdminController)->orders(),
 
     default    => (new HomeController)->notFound(),

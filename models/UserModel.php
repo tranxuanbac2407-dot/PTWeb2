@@ -133,4 +133,97 @@ class UserModel extends BaseModel
             return 0;
         }
     }
+
+    /**
+     * Lấy thông tin tài khoản theo ID (không bao gồm mật khẩu).
+     *
+     * @param int $id
+     * @return array|null
+     */
+    public function findById($id)
+    {
+        try {
+            $columnStatement = $this->pdo->query('SHOW COLUMNS FROM ' . $this->table);
+            $columns = $columnStatement ? $columnStatement->fetchAll(PDO::FETCH_COLUMN) : [];
+
+            $wantedColumns = ['id', 'full_name', 'username', 'email', 'phone', 'role'];
+            $selectColumns = [];
+
+            foreach ($wantedColumns as $column) {
+                if (in_array($column, $columns, true)) {
+                    $selectColumns[] = '`' . $column . '`';
+                }
+            }
+
+            if (!in_array('id', $columns, true) || empty($selectColumns)) {
+                return null;
+            }
+
+            $sql = 'SELECT ' . implode(', ', $selectColumns)
+                 . ' FROM ' . $this->table
+                 . ' WHERE `id` = :id LIMIT 1';
+
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':id', (int) $id, PDO::PARAM_INT);
+            $statement->execute();
+            $user = $statement->fetch();
+
+            return $user ?: null;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Kiểm tra tài khoản có đơn hàng hay không.
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public function hasOrders($userId)
+    {
+        try {
+            $sql = 'SELECT COUNT(*) FROM `orders` WHERE `user_id` = :user_id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':user_id', (int) $userId, PDO::PARAM_INT);
+            $statement->execute();
+
+            return (int) $statement->fetchColumn() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Xóa tài khoản khách hàng (chỉ cho phép role khách hàng, không xóa admin).
+     * Kiểm tra lại vai trò và sự tồn tại từ database trước khi xóa.
+     *
+     * @param int $id
+     * @return bool
+     */
+    public function deleteCustomerById($id)
+    {
+        try {
+            $user = $this->findById($id);
+            if (!$user) {
+                return false;
+            }
+
+            $role = (string) ($user['role'] ?? '');
+            if ($role === 'admin' || $role !== 'client') {
+                return false;
+            }
+
+            $sql = 'DELETE FROM ' . $this->table
+                 . ' WHERE `id` = :id AND `role` = :role LIMIT 1';
+
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':id', (int) $id, PDO::PARAM_INT);
+            $statement->bindValue(':role', 'client');
+
+            return $statement->execute() && $statement->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
 }
