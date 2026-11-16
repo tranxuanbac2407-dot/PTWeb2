@@ -1135,6 +1135,360 @@
     font-size: 0.88rem;
 }
 
+/* =========================================================
+   QUẢN LÝ SẢN PHẨM & QUẢN LÝ ẢNH
+   ========================================================= */
+
+/* Bộ lọc sản phẩm */
+.admin-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.admin-select-filter {
+    width: auto;
+    min-width: 170px;
+    height: 42px;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+.admin-filter-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Bảng sản phẩm */
+.admin-product-table td {
+    vertical-align: middle;
+}
+
+.admin-product-thumb {
+    width: 54px;
+    height: 54px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f1f4f8;
+    border: 1px solid #e2e8f0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.admin-product-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.25s ease;
+}
+
+.admin-product-thumb:hover img {
+    transform: scale(1.1);
+}
+
+.admin-product-thumb-empty {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sx-muted);
+    font-size: 1.4rem;
+}
+
+.admin-product-info-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.admin-product-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--sx-primary);
+    text-decoration: none;
+    line-height: 1.4;
+    transition: color 0.15s ease;
+}
+
+.admin-product-name:hover {
+    color: var(--sx-accent);
+}
+
+.admin-product-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-badge-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+.admin-product-price {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--sx-accent);
+    white-space: nowrap;
+}
+
+.admin-product-price small {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--sx-muted);
+}
+
+/* Size & Color */
+.admin-product-attr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.admin-attr-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    color: #334155;
+    max-width: 130px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Badge tồn kho */
+.admin-stock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-stock-badge.stock-in {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.admin-stock-badge.stock-low {
+    background: #fef9c3;
+    color: #a16207;
+}
+
+.admin-stock-badge.stock-out {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Currency input */
+.admin-input-group-currency {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.admin-input-group-currency .admin-form-input {
+    padding-right: 2.2rem;
+}
+
+.admin-input-currency-suffix {
+    position: absolute;
+    right: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--sx-muted);
+    pointer-events: none;
+}
+
+/* Quản lý ảnh sản phẩm trong Form */
+.admin-current-image-wrapper {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.admin-current-image-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.85rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-top: 0.4rem;
+}
+
+.admin-current-image-preview {
+    width: 90px;
+    height: 90px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    flex-shrink: 0;
+}
+
+.admin-current-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.admin-current-image-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: hidden;
+}
+
+.admin-current-image-path {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--sx-muted);
+}
+
+.admin-delete-image-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.86rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.admin-upload-box,
+.admin-url-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    height: 100%;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.admin-upload-box:hover,
+.admin-url-box:hover {
+    border-color: var(--sx-accent);
+    background: #fff;
+}
+
+.admin-upload-box-icon {
+    font-size: 2rem;
+    color: var(--sx-accent);
+    line-height: 1;
+}
+
+.admin-upload-box-text strong {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--sx-primary);
+    margin-bottom: 0.2rem;
+}
+
+.admin-upload-box-text span {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--sx-muted);
+}
+
+.admin-file-input {
+    display: none;
+}
+
+.admin-choose-file-btn {
+    cursor: pointer;
+    margin-top: 0.25rem;
+}
+
+.admin-file-chosen-name {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #15803d;
+    max-width: 220px;
+}
+
+/* Xem trước ảnh (Live Preview) */
+.admin-image-preview-section {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.admin-image-preview-box {
+    position: relative;
+    display: inline-block;
+    width: 140px;
+    height: 140px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid var(--sx-accent);
+    background: #f1f5f9;
+    box-shadow: 0 4px 12px rgba(255, 77, 46, 0.15);
+    margin-top: 0.4rem;
+}
+
+.admin-image-preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.admin-btn-preview-clear {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    border: none;
+    background: rgba(220, 38, 38, 0.9);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background 0.15s ease;
+}
+
+.admin-btn-preview-clear:hover {
+    background: #dc2626;
+}
+
 /* ----- Responsive cho Quản lý Admin ----- */
 @media (max-width: 767.98px) {
     .admin-toolbar {
@@ -1144,6 +1498,16 @@
 
     .admin-toolbar-left,
     .admin-toolbar-right {
+        width: 100%;
+    }
+
+    .admin-filter-group {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .admin-select-filter {
         width: 100%;
     }
 
@@ -1168,4 +1532,10 @@
     .admin-form-actions .admin-btn {
         width: 100%;
     }
+
+    .admin-current-image-card {
+        flex-direction: column;
+        text-align: center;
+    }
 }
+
