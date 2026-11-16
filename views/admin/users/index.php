@@ -20,7 +20,6 @@ $total = count($users);
                 <thead>
                     <tr>
                         <th style="width: 70px;" class="text-center">STT</th>
-                        <th style="width: 80px;" class="text-center">ID</th>
                         <th>Họ và tên</th>
                         <th>Tên đăng nhập</th>
                         <th>Email</th>
@@ -31,16 +30,14 @@ $total = count($users);
                 <tbody>
                     <?php foreach ($users as $index => $user): ?>
                         <?php
-                            $stt      = $index + 1;
-                            $id       = $user['id'] ?? null;
-                            $fullName = trim((string) ($user['full_name'] ?? ''));
-                            $username = trim((string) ($user['username'] ?? ''));
-                            $email    = trim((string) ($user['email'] ?? ''));
-                            $phone    = trim((string) ($user['phone'] ?? ''));
-                            $role     = (string) ($user['role'] ?? '');
+                            $stt       = $index + 1;
+                            $fullName  = trim((string) ($user['full_name'] ?? ''));
+                            $username  = trim((string) ($user['username'] ?? ''));
+                            $email     = trim((string) ($user['email'] ?? ''));
+                            $phone     = trim((string) ($user['phone'] ?? ''));
+                            $role      = (string) ($user['role'] ?? '');
                             $roleLabel = $role === 'admin' ? 'Admin' : 'Khách hàng';
 
-                            $displayId       = ($id !== null && $id !== '') ? (string) (int) $id : '-';
                             $displayFullName = $fullName !== '' ? $fullName : '-';
                             $displayUsername = $username !== '' ? $username : '-';
                             $displayEmail    = $email !== '' ? $email : '-';
@@ -48,13 +45,6 @@ $total = count($users);
                         ?>
                         <tr>
                             <td class="text-center"><?= $stt ?></td>
-                            <td class="text-center">
-                                <?php if ($displayId !== '-'): ?>
-                                    <span class="admin-id-badge">#<?= htmlspecialchars($displayId, ENT_QUOTES, 'UTF-8') ?></span>
-                                <?php else: ?>
-                                    -
-                                <?php endif; ?>
-                            </td>
                             <td><?= htmlspecialchars($displayFullName, ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($displayUsername, ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($displayEmail, ENT_QUOTES, 'UTF-8') ?></td>
