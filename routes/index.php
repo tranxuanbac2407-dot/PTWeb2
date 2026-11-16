@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 $action = $_GET['action'] ?? '/';
 
@@ -11,7 +11,7 @@ match ($action) {
     'login'    => (new AuthController)->login(),
     'logout'   => (new AuthController)->logout(),
 
-    // Khu vực quản trị (mọi route đều được AdminController kiểm tra quyền)
+    // Khu vực quản trị (mỗi route đều được AdminController kiểm tra quyền)
     'admin'                 => (new AdminController)->dashboard(),
     'admin-categories'      => (new AdminController)->categories(),
     'admin-category-create' => (new AdminController)->categoryCreate(),
