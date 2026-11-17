@@ -22,7 +22,7 @@ $esc = static function ($text) {
             </div>
         <?php endif; ?>
 
-        <form method="post" action="<?= BASE_URL ?>?action=register" novalidate>
+        <form method="post" action="<?= BASE_URL ?>?action=register">
             <input type="hidden" name="csrf_token" value="<?= $esc($csrfToken) ?>">
 
             <div class="mb-3">
@@ -60,13 +60,19 @@ $esc = static function ($text) {
 
             <div class="mb-3">
                 <label class="form-label" for="phone">Số điện thoại <span class="text-muted">(không bắt buộc)</span></label>
-                <input type="text"
+                <input type="tel"
                        class="form-control<?= isset($errors['phone']) ? ' is-invalid' : '' ?>"
                        id="phone" name="phone" value="<?= $val('phone') ?>"
+                       pattern="[0-9]{10}"
+                       minlength="10"
+                       maxlength="10"
+                       inputmode="numeric"
+                       title="Số điện thoại phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt."
                        autocomplete="tel">
                 <?php if (isset($errors['phone'])): ?>
                     <div class="invalid-feedback"><?= $esc($errors['phone']) ?></div>
                 <?php endif; ?>
+                <div class="form-text">Nếu nhập, vui lòng nhập đúng 10 chữ số (có thể bắt đầu bằng 0).</div>
             </div>
 
             <div class="mb-3">

@@ -367,8 +367,9 @@ class HomeController extends BaseController
             exit;
         }
 
+        $phoneInput      = $_POST['phone'] ?? '';
         $receiverName    = trim($_POST['receiver_name'] ?? '');
-        $phone           = trim($_POST['phone'] ?? '');
+        $phone           = is_string($phoneInput) ? $phoneInput : '';
         $shippingAddress = trim($_POST['shipping_address'] ?? '');
         $paymentMethod   = trim($_POST['payment_method'] ?? 'cod');
         $note            = trim($_POST['note'] ?? '');
@@ -379,8 +380,8 @@ class HomeController extends BaseController
             $errors[] = 'Vui lòng nhập họ và tên người nhận hàng.';
         }
 
-        if ($phone === '' || !preg_match('/^0[0-9]{9,10}$/', $phone)) {
-            $errors[] = 'Số điện thoại không hợp lệ (vui lòng nhập 10 số bắt đầu bằng số 0).';
+        if (!is_valid_phone($phoneInput)) {
+            $errors[] = 'Số điện thoại phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt.';
         }
 
         if ($shippingAddress === '' || mb_strlen($shippingAddress) < 6) {
@@ -484,20 +485,28 @@ class HomeController extends BaseController
         $currentUser = $_SESSION['user'] ?? null;
         $userId = (int) ($currentUser['id'] ?? 0);
 
-        $searchPhone = trim($_GET['phone'] ?? $_SESSION['last_checkout_phone'] ?? '');
+        $phoneInput  = $_GET['phone'] ?? $_SESSION['last_checkout_phone'] ?? '';
+        $searchPhone = is_string($phoneInput) ? $phoneInput : '';
+        if (!is_string($phoneInput)) {
+            $_GET['phone'] = '';
+        }
         $recentIds   = $_SESSION['recent_orders'] ?? [];
+
+        if ($phoneInput !== '' && !is_valid_phone($phoneInput)) {
+            $_SESSION['flash_error'] = 'Số điện thoại tra cứu phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt.';
+        }
 
         $orders = [];
 
         if ($userId > 0) {
             // Nếu đã đăng nhập: lấy toàn bộ đơn hàng của tài khoản
             $orders = $orderModel->getOrdersByUserId($userId);
-        } elseif (!empty($searchPhone)) {
+        } elseif (is_valid_phone($searchPhone)) {
             // Tra cứu theo số điện thoại
             $orders = $orderModel->getOrdersByPhone($searchPhone);
-        } elseif (!empty($recentIds)) {
+        } elseif ($searchPhone === '' && !empty($recentIds)) {
             // Lấy các đơn vừa đặt trong phiên hiện tại
-            $orders = $orderModel->getOrdersByIds($recentIds, $userId > 0 ? $userId : null);
+            $orders = $orderModel->getOrdersByIds($recentIds, null);
         }
 
         // Bổ sung danh sách sản phẩm tóm tắt cho từng đơn hàng

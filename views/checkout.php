@@ -83,10 +83,14 @@ $defaultAddress = $currentUser['address'] ?? '';
                                        id="phone"
                                        name="phone"
                                        placeholder="Ví dụ: 0912345678"
-                                       pattern="0[0-9]{9,10}"
+                                       pattern="[0-9]{10}"
+                                       minlength="10"
+                                       maxlength="10"
+                                       inputmode="numeric"
+                                       title="Số điện thoại phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt."
                                        value="<?= htmlspecialchars($_POST['phone'] ?? $defaultPhone, ENT_QUOTES, 'UTF-8') ?>"
                                        required>
-                                <div class="form-text">Nhập số điện thoại 10 chữ số để shipper liên hệ giao hàng.</div>
+                                <div class="form-text">Nhập đúng 10 chữ số (có thể bắt đầu bằng 0) để shipper liên hệ giao hàng.</div>
                             </div>
 
                             <div class="col-12">
