@@ -1595,3 +1595,108 @@
         gap: 0;
     }
 }
+
+/* =========================================================
+   QUẢN LÝ ĐƠN HÀNG ADMIN (ADMIN ORDERS)
+   ========================================================= */
+
+.admin-orders-table td {
+    vertical-align: middle;
+}
+
+.admin-customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.admin-customer-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--sx-primary);
+}
+
+.admin-phone-link {
+    color: #334155;
+    font-weight: 600;
+    font-size: 0.88rem;
+    transition: color 0.15s ease;
+}
+
+.admin-phone-link:hover {
+    color: var(--sx-accent);
+}
+
+.admin-order-date {
+    font-size: 0.85rem;
+    color: var(--sx-muted);
+}
+
+.admin-order-price {
+    font-size: 0.98rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+/* Badge trạng thái đơn hàng */
+.admin-order-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.admin-order-pending {
+    background: #fef9c3;
+    color: #854d0e;
+    border-color: #fde047;
+}
+
+.admin-order-processing {
+    background: #e0f2fe;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+
+.admin-order-shipping {
+    background: #f3e8ff;
+    color: #6b21a8;
+    border-color: #e9d5ff;
+}
+
+.admin-order-completed {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+.admin-order-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+/* Nút xem chi tiết */
+.admin-btn-action-view {
+    color: #0284c7;
+    border-color: #bae6fd;
+    background: #f0f9ff;
+}
+
+.admin-btn-action-view:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}
+
+.admin-order-meta-grid {
+    background: #f8fafc;
+    border: 1px solid var(--sx-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
