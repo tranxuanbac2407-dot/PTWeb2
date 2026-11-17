@@ -1324,6 +1324,11 @@ label:focus-visible {
     border-color: #cbd5e1;
 }
 
+.checkout-page .sx-card {
+    height: auto;
+    overflow: visible;
+}
+
 .product-thumb-wrapper {
     position: relative;
     aspect-ratio: 1 / 1.15;
