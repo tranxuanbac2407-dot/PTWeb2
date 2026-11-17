@@ -16,10 +16,12 @@ class AdminController extends BaseController
         $categoryModel = new CategoryModel();
         $productModel  = new ProductModel();
         $userModel     = new UserModel();
+        $orderModel    = new OrderModel();
 
         $totalCategories = count($categoryModel->getAll());
         $totalProducts   = $productModel->countAll();
         $totalUser       = $userModel->countAll();
+        $totalOrders     = $orderModel->countAll();
 
         $this->renderAdminPage(
             'dashboard',
@@ -31,6 +33,7 @@ class AdminController extends BaseController
                 'totalCategories' => $totalCategories,
                 'totalProducts'   => $totalProducts,
                 'totalUser'       => $totalUser,
+                'totalOrders'     => $totalOrders,
             ]
         );
     }
@@ -751,17 +754,107 @@ class AdminController extends BaseController
     }
 
     /**
-     * Trang quản lý đơn hàng (khung giao diện, chờ nhiệm vụ CRUD).
+     * Danh sách đơn hàng trong khu vực quản trị.
      */
     public function orders()
     {
+        $orderModel = new OrderModel();
+
+        $keyword = trim($_GET['keyword'] ?? '');
+        $status  = trim($_GET['status'] ?? '');
+
+        $orders       = $orderModel->getAllAdmin($keyword, $status);
+        $flashSuccess = $this->getFlash('success');
+        $flashError   = $this->getFlash('error');
+
         $this->renderAdminPage(
             'orders/index',
             'Quản lý đơn hàng | Quản trị SPORTIX',
             'Quản lý đơn hàng',
-            'Theo dõi và xử lý đơn hàng của khách hàng.',
-            'orders'
+            'Theo dõi, tra cứu và xử lý đơn hàng của khách hàng.',
+            'orders',
+            [
+                'orders'       => $orders,
+                'keyword'      => $keyword,
+                'status'       => $status,
+                'flashSuccess' => $flashSuccess,
+                'flashError'   => $flashError,
+            ]
         );
+    }
+
+    /**
+     * Xem chi tiết đơn hàng (các sản phẩm trong đơn, địa chỉ giao hàng và cập nhật trạng thái).
+     */
+    public function orderDetail()
+    {
+        $orderModel = new OrderModel();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã đơn hàng không hợp lệ.');
+            $this->redirect('?action=admin-orders');
+        }
+
+        $order = $orderModel->getById($id);
+        if (!$order) {
+            $this->setFlash('error', 'Không tìm thấy đơn hàng yêu cầu.');
+            $this->redirect('?action=admin-orders');
+        }
+
+        $orderItems   = $orderModel->getOrderItems($id);
+        $csrfToken    = $this->csrfToken();
+        $flashSuccess = $this->getFlash('success');
+        $flashError   = $this->getFlash('error');
+
+        $this->renderAdminPage(
+            'orders/detail',
+            'Chi tiết đơn hàng #' . $id . ' | Quản trị SPORTIX',
+            'Chi tiết đơn hàng #' . $id,
+            'Thông tin khách hàng, sản phẩm và trạng thái đơn hàng.',
+            'orders',
+            [
+                'order'        => $order,
+                'orderItems'   => $orderItems,
+                'csrfToken'    => $csrfToken,
+                'flashSuccess' => $flashSuccess,
+                'flashError'   => $flashError,
+            ]
+        );
+    }
+
+    /**
+     * Cập nhật trạng thái đơn hàng.
+     */
+    public function orderUpdateStatus()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('?action=admin-orders');
+        }
+
+        if (!$this->csrfValid()) {
+            $this->setFlash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+            $this->redirect('?action=admin-orders');
+        }
+
+        $id     = (int) ($_POST['order_id'] ?? 0);
+        $status = trim($_POST['order_status'] ?? '');
+
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã đơn hàng không hợp lệ.');
+            $this->redirect('?action=admin-orders');
+        }
+
+        $orderModel = new OrderModel();
+        $updated = $orderModel->updateStatus($id, $status);
+
+        if ($updated) {
+            $this->setFlash('success', 'Cập nhật trạng thái đơn hàng #' . $id . ' thành công!');
+        } else {
+            $this->setFlash('error', 'Không thể cập nhật trạng thái đơn hàng.');
+        }
+
+        $this->redirect('?action=admin-order-detail&id=' . $id);
     }
 
     /**

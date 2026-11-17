@@ -26,9 +26,11 @@ match ($action) {
     'admin-product-create'  => (new AdminController)->productCreate(),
     'admin-product-edit'    => (new AdminController)->productEdit(),
     'admin-product-delete'  => (new AdminController)->productDelete(),
-    'admin-users'           => (new AdminController)->users(),
-    'admin-user-delete'     => (new AdminController)->userDelete(),
-    'admin-orders'          => (new AdminController)->orders(),
+    'admin-users'               => (new AdminController)->users(),
+    'admin-user-delete'         => (new AdminController)->userDelete(),
+    'admin-orders'              => (new AdminController)->orders(),
+    'admin-order-detail'        => (new AdminController)->orderDetail(),
+    'admin-order-update-status' => (new AdminController)->orderUpdateStatus(),
 
     default    => (new HomeController)->notFound(),
 };
