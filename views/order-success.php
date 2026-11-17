@@ -81,10 +81,40 @@ function get_order_success_payment_name($method) {
                         <i class="bi bi-geo-alt-fill text-accent me-2"></i>Địa chỉ nhận hàng
                     </h2>
 
-                    <div class="small">
-                        <div class="fw-bold text-dark fs-6 mb-1"><?= htmlspecialchars($order['receiver_name'] ?? 'Khách hàng', ENT_QUOTES, 'UTF-8') ?></div>
-                        <div class="text-muted mb-2"><i class="bi bi-telephone me-1"></i><?= htmlspecialchars($order['phone'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                        <div class="text-muted"><i class="bi bi-house-door me-1"></i><?= htmlspecialchars($order['shipping_address'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                    <?php
+                        $receiverRaw = $order['receiver_name'] ?? '';
+                        $phoneRaw = $order['phone'] ?? '';
+                        $addressRaw = $order['shipping_address'] ?? '';
+                        $receiverName = is_scalar($receiverRaw) ? trim((string) $receiverRaw) : '';
+                        $receiverPhone = is_scalar($phoneRaw) ? trim((string) $phoneRaw) : '';
+                        $shippingAddress = is_scalar($addressRaw) ? trim((string) $addressRaw) : '';
+                        $emptyValue = 'Chưa cập nhật';
+                    ?>
+
+                    <div class="small d-flex flex-column gap-3">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-person-fill text-accent flex-shrink-0 mt-1" aria-hidden="true"></i>
+                            <div class="min-w-0">
+                                <div class="text-muted">Người nhận</div>
+                                <div class="fw-semibold text-dark text-break"><?= htmlspecialchars($receiverName !== '' ? $receiverName : $emptyValue, ENT_QUOTES, 'UTF-8') ?></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-telephone-fill text-accent flex-shrink-0 mt-1" aria-hidden="true"></i>
+                            <div class="min-w-0">
+                                <div class="text-muted">Số điện thoại</div>
+                                <div class="fw-semibold text-dark text-break"><?= htmlspecialchars($receiverPhone !== '' ? $receiverPhone : $emptyValue, ENT_QUOTES, 'UTF-8') ?></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-house-door-fill text-accent flex-shrink-0 mt-1" aria-hidden="true"></i>
+                            <div class="min-w-0">
+                                <div class="text-muted">Địa chỉ giao hàng</div>
+                                <div class="fw-semibold text-dark text-break"><?= htmlspecialchars($shippingAddress !== '' ? $shippingAddress : $emptyValue, ENT_QUOTES, 'UTF-8') ?></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
