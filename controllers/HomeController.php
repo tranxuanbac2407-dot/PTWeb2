@@ -162,7 +162,25 @@ class HomeController
             exit;
         }
 
-        // Tạo khóa định danh duy nhất cho từng thuộc tính trong giỏ
+        // Tự động gán thuộc tính mặc định nếu chưa chọn khi thêm nhanh
+        if ($size === '' && !empty($product['size'])) {
+            $rawSizes = explode(',', (string) $product['size']);
+            $size = trim($rawSizes[0] ?? '');
+        }
+        if ($color === '' && !empty($product['color'])) {
+            $rawColors = explode(',', (string) $product['color']);
+            $color = trim($rawColors[0] ?? '');
+        }
+
+        // Nếu sản phẩm không có thuộc tính size hoặc color
+        if ($size === '') {
+            $size = 'Freesize';
+        }
+        if ($color === '') {
+            $color = 'Tiêu chuẩn';
+        }
+
+        // Tạo khóa định danh duy nhất cho từng biến thể thuộc tính trong giỏ
         $cartKey = $productId . '_' . md5($size . '_' . $color);
 
         if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
@@ -173,17 +191,18 @@ class HomeController
             $_SESSION['cart'][$cartKey]['quantity'] += $quantity;
         } else {
             $_SESSION['cart'][$cartKey] = [
-                'product_id' => $productId,
-                'name'       => $product['product_name'],
-                'price'      => (float) $product['price'],
-                'image'      => $product['image'] ?? '',
-                'size'       => $size,
-                'color'      => $color,
-                'quantity'   => $quantity,
+                'product_id'    => $productId,
+                'name'          => $product['product_name'],
+                'price'         => (float) $product['price'],
+                'image'         => $product['image'] ?? '',
+                'size'          => $size,
+                'color'         => $color,
+                'quantity'      => $quantity,
+                'category_name' => $product['categories_name'] ?? 'Thời trang thể thao',
             ];
         }
 
-        $_SESSION['flash_success'] = 'Đã thêm "' . htmlspecialchars($product['product_name']) . '" vào giỏ hàng!';
+        $_SESSION['flash_success'] = 'Đã thêm "' . htmlspecialchars($product['product_name']) . '" (' . $size . ', ' . $color . ') vào giỏ hàng!';
 
         if ($buyNow) {
             header('Location: ' . BASE_URL . '?action=cart');
@@ -200,15 +219,19 @@ class HomeController
     {
         $cart = $_SESSION['cart'] ?? [];
         $subtotal = 0;
+        $totalQuantity = 0;
+
         foreach ($cart as $item) {
-            $subtotal += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
+            $qty = (int) ($item['quantity'] ?? 1);
+            $subtotal += ((float) ($item['price'] ?? 0)) * $qty;
+            $totalQuantity += $qty;
         }
 
         // Tính phí vận chuyển: Miễn phí nếu tạm tính >= 500k, ngược lại 30.000đ (0đ nếu giỏ rỗng)
         $shippingFee = ($subtotal > 0 && $subtotal < 500000) ? 30000 : 0;
         $totalAmount = $subtotal + $shippingFee;
 
-        $title = 'Giỏ hàng của bạn | SPORTIX';
+        $title = 'Giỏ hàng của bạn (' . $totalQuantity . ' món) | SPORTIX';
         $view  = 'cart';
 
         require_once PATH_VIEW_MAIN;
