@@ -131,7 +131,8 @@ class OrderModel extends BaseModel
     }
 
     /**
-     * Tạo mới một đơn hàng kèm các món hàng chi tiết.
+     * Tự động tạo mới một đơn hàng kèm các món hàng chi tiết.
+     * Tự động cập nhật giảm số lượng tồn kho (stock_quantity) và dọn dẹp giỏ hàng.
      * Sử dụng transaction để bảo toàn dữ liệu.
      *
      * @param array $orderData
@@ -152,7 +153,8 @@ class OrderModel extends BaseModel
                  . 'VALUES (:user_id, :receiver_name, :phone, :shipping_address, :total_amount, :payment_method, :order_status, NOW())';
 
             $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':user_id', (int) ($orderData['user_id'] ?? 0), PDO::PARAM_INT);
+            $userId = (int) ($orderData['user_id'] ?? 0);
+            $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $statement->bindValue(':receiver_name', trim($orderData['receiver_name'] ?? ''));
             $statement->bindValue(':phone', trim($orderData['phone'] ?? ''));
             $statement->bindValue(':shipping_address', trim($orderData['shipping_address'] ?? ''));
@@ -168,19 +170,24 @@ class OrderModel extends BaseModel
                 return 0;
             }
 
-            // Insert từng món hàng vào order_items
+            // Insert từng món hàng vào order_items & tự động cập nhật trừ tồn kho
             $itemSql = 'INSERT INTO order_items '
                      . '(order_id, product_id, product_name, size, color, unit_price, quantity, subtotal) '
                      . 'VALUES (:order_id, :product_id, :product_name, :size, :color, :unit_price, :quantity, :subtotal)';
             $itemStmt = $this->pdo->prepare($itemSql);
 
+            // Câu lệnh tự động cập nhật giảm số lượng tồn kho trong kho sản phẩm
+            $stockSql = 'UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - :qty) WHERE product_id = :p_id';
+            $stockStmt = $this->pdo->prepare($stockSql);
+
             foreach ($cartItems as $item) {
                 $unitPrice = (float) ($item['price'] ?? 0);
                 $qty       = (int) ($item['quantity'] ?? 1);
                 $subtotal  = $unitPrice * $qty;
+                $pId       = (int) ($item['product_id'] ?? 0);
 
                 $itemStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
-                $itemStmt->bindValue(':product_id', (int) ($item['product_id'] ?? 0), PDO::PARAM_INT);
+                $itemStmt->bindValue(':product_id', $pId, PDO::PARAM_INT);
                 $itemStmt->bindValue(':product_name', trim($item['name'] ?? 'Sản phẩm'));
                 $itemStmt->bindValue(':size', !empty($item['size']) ? trim($item['size']) : null);
                 $itemStmt->bindValue(':color', !empty($item['color']) ? trim($item['color']) : null);
@@ -188,6 +195,29 @@ class OrderModel extends BaseModel
                 $itemStmt->bindValue(':quantity', $qty, PDO::PARAM_INT);
                 $itemStmt->bindValue(':subtotal', $subtotal);
                 $itemStmt->execute();
+
+                // Tự động trừ tồn kho nếu có product_id hợp lệ
+                if ($pId > 0) {
+                    try {
+                        $stockStmt->bindValue(':qty', $qty, PDO::PARAM_INT);
+                        $stockStmt->bindValue(':p_id', $pId, PDO::PARAM_INT);
+                        $stockStmt->execute();
+                    } catch (Throwable $stockEx) {
+                        // Bỏ qua nếu bảng products chưa có cột stock_quantity hoặc không hỗ trợ
+                    }
+                }
+            }
+
+            // Tự động dọn dẹp giỏ hàng trong database nếu người dùng đã đăng nhập
+            if ($userId > 0) {
+                try {
+                    $clearCartSql = 'DELETE ci FROM cart_items ci INNER JOIN carts c ON ci.cart_id = c.cart_id WHERE c.user_id = :u_id';
+                    $clearCartStmt = $this->pdo->prepare($clearCartSql);
+                    $clearCartStmt->bindValue(':u_id', $userId, PDO::PARAM_INT);
+                    $clearCartStmt->execute();
+                } catch (Throwable $cartEx) {
+                    // Bỏ qua nếu cấu trúc giỏ hàng database chưa khởi tạo
+                }
             }
 
             $this->pdo->commit();
