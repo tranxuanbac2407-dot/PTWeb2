@@ -92,8 +92,8 @@ $quickLinks = [
                     <i class="bi bi-receipt" aria-hidden="true"></i>
                 </span>
                 <p class="admin-stat-label">Tổng số đơn hàng</p>
-                <p class="admin-stat-value">&mdash;</p>
-                <p class="admin-stat-note">Chưa có dữ liệu thống kê</p>
+                <p class="admin-stat-value"><?= isset($totalOrders) ? (int) $totalOrders : '&mdash;' ?></p>
+                <p class="admin-stat-note"><?= isset($totalOrders) ? 'Đơn hàng trên hệ thống' : 'Chưa có dữ liệu thống kê' ?></p>
             </article>
         </div>
     </div>
