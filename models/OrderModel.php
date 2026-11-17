@@ -13,41 +13,36 @@ class OrderModel extends BaseModel
      */
     public function getAllAdmin($keyword = null, $status = null)
     {
+        $sql = 'SELECT o.*, u.username, u.email, COALESCE(NULLIF(u.full_name, \'\'), o.receiver_name) AS customer_name '
+             . 'FROM ' . $this->table . ' o '
+             . 'LEFT JOIN users u ON o.user_id = u.id '
+             . 'WHERE 1=1 ';
+
+        $params = [];
+        if (!empty($keyword)) {
+            $sql .= 'AND (o.order_id = :order_id_exact OR o.receiver_name LIKE :keyword OR o.phone LIKE :keyword OR u.username LIKE :keyword) ';
+            $params[':order_id_exact'] = (is_numeric($keyword) && !is_valid_phone($keyword)) ? (int) $keyword : -1;
+            $params[':keyword'] = '%' . $keyword . '%';
+        }
+
+        if (!empty($status)) {
+            $sql .= 'AND o.order_status = :status ';
+            $params[':status'] = trim($status);
+        }
+
+        $sql .= 'ORDER BY o.order_id DESC';
+
         try {
-            $sql = 'SELECT o.*, u.username, u.email, COALESCE(NULLIF(u.fullname, \'\'), o.receiver_name) AS customer_name '
-                 . 'FROM ' . $this->table . ' o '
-                 . 'LEFT JOIN users u ON o.user_id = u.id '
-                 . 'WHERE 1=1 ';
-
-            $params = [];
-            if (!empty($keyword)) {
-                $sql .= 'AND (o.order_id = :order_id_exact OR o.receiver_name LIKE :keyword OR o.phone LIKE :keyword OR u.username LIKE :keyword) ';
-                $params[':order_id_exact'] = (is_numeric($keyword) && !is_valid_phone($keyword)) ? (int) $keyword : -1;
-                $params[':keyword'] = '%' . $keyword . '%';
-            }
-
-            if (!empty($status)) {
-                $sql .= 'AND o.order_status = :status ';
-                $params[':status'] = trim($status);
-            }
-
-            $sql .= 'ORDER BY o.order_id DESC';
-
             $statement = $this->pdo->prepare($sql);
             foreach ($params as $k => $v) {
                 $statement->bindValue($k, $v);
             }
             $statement->execute();
-            $orders = $statement->fetchAll();
 
-            if (!empty($orders)) {
-                return $orders;
-            }
+            return $statement->fetchAll();
         } catch (Throwable $e) {
-            // Chuyển sang fallback khi CSDL chưa có dữ liệu hoặc lỗi kết nối
+            throw new RuntimeException('Không thể tải danh sách đơn hàng từ cơ sở dữ liệu.', 0, $e);
         }
-
-        return $this->getDefaultOrders($keyword, $status);
     }
 
     /**
@@ -336,10 +331,10 @@ class OrderModel extends BaseModel
                 return (int) $row['total'];
             }
         } catch (Throwable $e) {
-            // Bỏ qua lỗi
+            throw new RuntimeException('Không thể đếm số đơn hàng từ cơ sở dữ liệu.', 0, $e);
         }
 
-        return count($this->getDefaultOrders());
+        throw new RuntimeException('Không thể đếm số đơn hàng từ cơ sở dữ liệu.');
     }
 
     /**
