@@ -88,10 +88,15 @@ function get_payment_name($method) {
                 <input type="hidden" name="action" value="order-history">
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text"
+                    <input type="tel"
                            name="phone"
                            class="form-control"
-                           placeholder="Tra cứu theo SĐT..."
+                           placeholder="Tra cứu SĐT (10 số)..."
+                           pattern="[0-9]{10}"
+                           minlength="10"
+                           maxlength="10"
+                           inputmode="numeric"
+                           title="Số điện thoại tra cứu phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt."
                            value="<?= $searchPhone ?>"
                            style="min-width: 190px;">
                     <button class="btn btn-outline-primary" type="submit">Tra cứu</button>

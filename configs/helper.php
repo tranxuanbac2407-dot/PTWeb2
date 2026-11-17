@@ -1,5 +1,12 @@
 <?php
 
+if (!function_exists('is_valid_phone')) {
+    function is_valid_phone($phone)
+    {
+        return is_string($phone) && preg_match('/^[0-9]{10}$/', $phone) === 1;
+    }
+}
+
 if (!function_exists('debug')) {
     function debug($data)
     {
