@@ -16,6 +16,7 @@ match ($action) {
     'cart-clear'     => (new HomeController)->clearCart(),
     'checkout'       => (new HomeController)->checkout(),
     'place-order'    => (new HomeController)->placeOrder(),
+    'order-success'  => (new HomeController)->orderSuccess(),
     'order-history'  => (new HomeController)->orderHistory(),
     'order-detail'   => (new HomeController)->orderDetailCustomer(),
     'register'       => (new AuthController)->register(),
