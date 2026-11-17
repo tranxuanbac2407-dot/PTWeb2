@@ -42,21 +42,26 @@ $statusLabels = [
                 <input type="hidden" name="action" value="admin-orders">
 
                 <div class="admin-filter-group">
-                    <!-- Ô tìm kiếm mã đơn, tên khách, số điện thoại -->
-                    <div class="admin-search-input-group">
-                        <i class="bi bi-search admin-search-icon" aria-hidden="true"></i>
-                        <input type="text"
-                               name="keyword"
-                               class="admin-form-input admin-search-input"
-                               placeholder="Tìm mã đơn, tên khách, số ĐT..."
-                               value="<?= htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
-                        <?php if ($keyword !== ''): ?>
-                            <a href="<?= BASE_URL ?>?action=admin-orders<?= $status !== '' ? '&amp;status=' . urlencode($status) : '' ?>"
-                               class="admin-search-clear"
-                               title="Xóa từ khóa tìm kiếm">
-                                <i class="bi bi-x-circle-fill"></i>
-                            </a>
-                        <?php endif; ?>
+                    <div class="admin-search-combo">
+                        <div class="admin-search-input-group">
+                            <i class="bi bi-search admin-search-icon" aria-hidden="true"></i>
+                            <input type="text"
+                                   name="keyword"
+                                   class="admin-form-input admin-search-input"
+                                   placeholder="Tìm mã đơn hoặc tên khách hàng..."
+                                   value="<?= htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
+                            <?php if ($keyword !== ''): ?>
+                                <a href="<?= BASE_URL ?>?action=admin-orders<?= $status !== '' ? '&amp;status=' . urlencode($status) : '' ?>"
+                                   class="admin-search-clear"
+                                   title="Xóa từ khóa tìm kiếm">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                        <button type="submit" class="admin-btn admin-btn-secondary admin-search-btn">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                            <span>Tìm kiếm</span>
+                        </button>
                     </div>
 
                     <!-- Dropdown lọc theo trạng thái đơn hàng -->
@@ -68,10 +73,6 @@ $statusLabels = [
                         <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
                         <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
                     </select>
-
-                    <button type="submit" class="admin-btn admin-btn-secondary">
-                        <i class="bi bi-funnel"></i> Lọc
-                    </button>
 
                     <?php if ($keyword !== '' || $status !== ''): ?>
                         <a href="<?= BASE_URL ?>?action=admin-orders" class="admin-btn admin-btn-outline" title="Đặt lại bộ lọc">
