@@ -1,6 +1,6 @@
 <?php
 
-class HomeController
+class HomeController extends BaseController
 {
     /**
      * Trang chủ website SPORTIX.
@@ -320,6 +320,8 @@ class HomeController
      */
     public function checkout()
     {
+        $this->requireAuthenticatedUser('checkout');
+
         $cart = $_SESSION['cart'] ?? [];
 
         // Kiểm tra validation giỏ hàng: không được để trống khi đặt hàng
@@ -328,6 +330,8 @@ class HomeController
             header('Location: ' . BASE_URL . '?action=cart');
             exit;
         }
+
+        $csrfToken = $this->csrfToken();
 
         $title = 'Thanh toán & Đặt hàng | SPORTIX';
         $view  = 'checkout';
@@ -341,8 +345,16 @@ class HomeController
      */
     public function placeOrder()
     {
+        $authenticatedUser = $this->requireAuthenticatedUser('checkout');
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
+
+        if (!$this->csrfValid()) {
+            $_SESSION['flash_error'] = 'Phiên làm việc đã hết hạn, vui lòng quay lại trang thanh toán và gửi lại đơn hàng.';
+            header('Location: ' . BASE_URL . '?action=checkout');
             exit;
         }
 
@@ -396,7 +408,7 @@ class HomeController
             $fullAddress .= ' [Ghi chú: ' . $note . ']';
         }
 
-        $userId = (int) ($_SESSION['user']['id'] ?? 0);
+        $userId = (int) $authenticatedUser['id'];
 
         $orderData = [
             'user_id'          => $userId,
@@ -438,6 +450,8 @@ class HomeController
      */
     public function orderSuccess()
     {
+        $authenticatedUser = $this->requireAuthenticatedUser();
+
         $orderId = (int) ($_GET['id'] ?? $_SESSION['last_order_id'] ?? 0);
         if ($orderId <= 0) {
             header('Location: ' . BASE_URL . '?action=order-history');
@@ -445,9 +459,10 @@ class HomeController
         }
 
         $orderModel = new OrderModel();
-        $order = $orderModel->getById($orderId);
+        $order = $orderModel->getById($orderId, (int) $authenticatedUser['id']);
 
         if (!$order) {
+            $_SESSION['flash_error'] = 'Không tìm thấy đơn hàng hợp lệ cho tài khoản của bạn.';
             header('Location: ' . BASE_URL . '?action=order-history');
             exit;
         }
@@ -482,7 +497,7 @@ class HomeController
             $orders = $orderModel->getOrdersByPhone($searchPhone);
         } elseif (!empty($recentIds)) {
             // Lấy các đơn vừa đặt trong phiên hiện tại
-            $orders = $orderModel->getOrdersByIds($recentIds);
+            $orders = $orderModel->getOrdersByIds($recentIds, $userId > 0 ? $userId : null);
         }
 
         // Bổ sung danh sách sản phẩm tóm tắt cho từng đơn hàng
@@ -503,6 +518,8 @@ class HomeController
      */
     public function orderDetailCustomer()
     {
+        $authenticatedUser = $this->requireAuthenticatedUser();
+
         $orderId = (int) ($_GET['id'] ?? 0);
         if ($orderId <= 0) {
             header('Location: ' . BASE_URL . '?action=order-history');
@@ -510,7 +527,7 @@ class HomeController
         }
 
         $orderModel = new OrderModel();
-        $order = $orderModel->getById($orderId);
+        $order = $orderModel->getById($orderId, (int) $authenticatedUser['id']);
 
         if (!$order) {
             $_SESSION['flash_error'] = 'Không tìm thấy đơn hàng #' . $orderId;

@@ -7,6 +7,31 @@
  */
 class BaseController
 {
+    protected function requireAuthenticatedUser($redirectAction = '')
+    {
+        $user = $_SESSION['user'] ?? null;
+
+        if ($user instanceof __PHP_Incomplete_Class || is_object($user)) {
+            unset($_SESSION['user']);
+            $user = null;
+        }
+
+        $userId = is_array($user) ? (int) ($user['id'] ?? 0) : 0;
+
+        if (!is_array($user) || $userId <= 0) {
+            $this->redirectToLogin($redirectAction);
+        }
+
+        $databaseUser = (new UserModel())->findById($userId);
+
+        if (!$databaseUser || (int) ($databaseUser['id'] ?? 0) !== $userId) {
+            unset($_SESSION['user']);
+            $this->redirectToLogin($redirectAction);
+        }
+
+        return $databaseUser;
+    }
+
     /**
      * Bảo vệ khu vực Admin ở phía server.
      *
@@ -45,6 +70,16 @@ class BaseController
         }
 
         return $user;
+    }
+
+    private function redirectToLogin($redirectAction)
+    {
+        if (is_string($redirectAction) && in_array($redirectAction, ['checkout'], true)) {
+            $_SESSION['login_redirect'] = $redirectAction;
+        }
+
+        $_SESSION['flash_error'] = 'Vui lòng đăng nhập để tiếp tục đặt hàng.';
+        $this->redirect('?action=login');
     }
 
     /**

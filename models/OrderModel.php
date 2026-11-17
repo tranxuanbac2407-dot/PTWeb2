@@ -56,42 +56,40 @@ class OrderModel extends BaseModel
      * @param int $id
      * @return array|null
      */
-    public function getById($id)
+    public function getById($id, $userId = null)
     {
+        $id = (int) $id;
+        $scopeUserId = ($userId === null) ? null : (int) $userId;
+
+        if ($id <= 0 || ($scopeUserId !== null && $scopeUserId <= 0)) {
+            return null;
+        }
+
         try {
-            $sql = 'SELECT o.*, u.username, u.email, COALESCE(NULLIF(u.fullname, \'\'), o.receiver_name) AS customer_name '
+            $sql = 'SELECT o.*, u.username, u.email, COALESCE(NULLIF(u.full_name, \'\'), o.receiver_name) AS customer_name '
                  . 'FROM ' . $this->table . ' o '
                  . 'LEFT JOIN users u ON o.user_id = u.id '
-                 . 'WHERE o.order_id = :id LIMIT 1';
+                 . 'WHERE o.order_id = :id';
+
+            $params = [':id' => $id];
+
+            if ($scopeUserId !== null) {
+                $sql .= ' AND o.user_id = :user_id';
+                $params[':user_id'] = $scopeUserId;
+            }
+
+            $sql .= ' LIMIT 1';
 
             $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':id', (int) $id, PDO::PARAM_INT);
+            foreach ($params as $key => $value) {
+                $statement->bindValue($key, $value, PDO::PARAM_INT);
+            }
             $statement->execute();
-            $order = $statement->fetch();
 
-            if ($order) {
-                return $order;
-            }
+            return $statement->fetch() ?: null;
         } catch (Throwable $e) {
-            // Bỏ qua lỗi
+            return null;
         }
-
-        // Kiểm tra trong session fallback đơn hàng vừa đặt
-        if (!empty($_SESSION['fallback_orders'])) {
-            foreach ($_SESSION['fallback_orders'] as $fo) {
-                if ((int) ($fo['order_id'] ?? 0) === (int) $id) {
-                    return $fo;
-                }
-            }
-        }
-
-        foreach ($this->getDefaultOrders() as $o) {
-            if ((int) $o['order_id'] === (int) $id) {
-                return $o;
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -113,21 +111,11 @@ class OrderModel extends BaseModel
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':order_id', (int) $orderId, PDO::PARAM_INT);
             $statement->execute();
-            $items = $statement->fetchAll();
 
-            if (!empty($items)) {
-                return $items;
-            }
+            return $statement->fetchAll();
         } catch (Throwable $e) {
-            // Bỏ qua lỗi
+            return [];
         }
-
-        // Kiểm tra trong session fallback đơn hàng vừa đặt
-        if (!empty($_SESSION['fallback_order_items'][$orderId])) {
-            return $_SESSION['fallback_order_items'][$orderId];
-        }
-
-        return $this->getDefaultOrderItems($orderId);
     }
 
     /**
@@ -141,7 +129,9 @@ class OrderModel extends BaseModel
      */
     public function createOrder(array $orderData, array $cartItems)
     {
-        if (empty($cartItems)) {
+        $userId = (int) ($orderData['user_id'] ?? 0);
+
+        if ($userId <= 0 || empty($cartItems)) {
             return 0;
         }
 
@@ -153,7 +143,6 @@ class OrderModel extends BaseModel
                  . 'VALUES (:user_id, :receiver_name, :phone, :shipping_address, :total_amount, :payment_method, :order_status, NOW())';
 
             $statement = $this->pdo->prepare($sql);
-            $userId = (int) ($orderData['user_id'] ?? 0);
             $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $statement->bindValue(':receiver_name', trim($orderData['receiver_name'] ?? ''));
             $statement->bindValue(':phone', trim($orderData['phone'] ?? ''));
@@ -227,49 +216,7 @@ class OrderModel extends BaseModel
                 $this->pdo->rollBack();
             }
 
-            // Fallback lưu đơn vào Session nếu CSDL lỗi
-            $fallbackId = time();
-            $savedOrder = [
-                'order_id'         => $fallbackId,
-                'user_id'          => (int) ($orderData['user_id'] ?? 0),
-                'receiver_name'    => trim($orderData['receiver_name'] ?? 'Khách hàng'),
-                'customer_name'    => trim($orderData['receiver_name'] ?? 'Khách hàng'),
-                'phone'            => trim($orderData['phone'] ?? ''),
-                'shipping_address' => trim($orderData['shipping_address'] ?? ''),
-                'total_amount'     => (float) ($orderData['total_amount'] ?? 0),
-                'payment_method'   => trim($orderData['payment_method'] ?? 'cod'),
-                'order_status'     => 'pending',
-                'order_date'       => date('Y-m-d H:i:s'),
-            ];
-
-            if (!isset($_SESSION['fallback_orders'])) {
-                $_SESSION['fallback_orders'] = [];
-            }
-            $_SESSION['fallback_orders'][$fallbackId] = $savedOrder;
-
-            // Lưu chi tiết các món vào session
-            $savedItems = [];
-            $idx = 1;
-            foreach ($cartItems as $item) {
-                $unitPrice = (float) ($item['price'] ?? 0);
-                $qty       = (int) ($item['quantity'] ?? 1);
-                $savedItems[] = [
-                    'order_item_id'   => $idx++,
-                    'order_id'        => $fallbackId,
-                    'product_id'      => (int) ($item['product_id'] ?? 0),
-                    'product_name'    => trim($item['name'] ?? 'Sản phẩm'),
-                    'size'            => $item['size'] ?? '',
-                    'color'           => $item['color'] ?? '',
-                    'unit_price'      => $unitPrice,
-                    'quantity'        => $qty,
-                    'subtotal'        => $unitPrice * $qty,
-                    'image'           => $item['image'] ?? '',
-                    'categories_name' => 'Thể thao',
-                ];
-            }
-            $_SESSION['fallback_order_items'][$fallbackId] = $savedItems;
-
-            return $fallbackId;
+            return 0;
         }
     }
 
@@ -286,40 +233,16 @@ class OrderModel extends BaseModel
             return [];
         }
 
-        $results = [];
-
         try {
             $sql = 'SELECT * FROM ' . $this->table . ' WHERE user_id = :user_id ORDER BY order_id DESC';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $statement->execute();
-            $dbOrders = $statement->fetchAll();
-            if (!empty($dbOrders)) {
-                $results = $dbOrders;
-            }
+
+            return $statement->fetchAll();
         } catch (Throwable $e) {
-            // Chuyển sang fallback
+            return [];
         }
-
-        // Bổ sung các đơn trong session fallback của user nếu có
-        if (!empty($_SESSION['fallback_orders'])) {
-            foreach ($_SESSION['fallback_orders'] as $fo) {
-                if ((int) ($fo['user_id'] ?? 0) === $userId) {
-                    $results[] = $fo;
-                }
-            }
-        }
-
-        // Nếu vẫn trống và userId nằm trong mock
-        if (empty($results)) {
-            foreach ($this->getDefaultOrders() as $mo) {
-                if ((int) $mo['user_id'] === $userId) {
-                    $results[] = $mo;
-                }
-            }
-        }
-
-        return $results;
     }
 
     /**
@@ -335,40 +258,16 @@ class OrderModel extends BaseModel
             return [];
         }
 
-        $results = [];
-
         try {
             $sql = 'SELECT * FROM ' . $this->table . ' WHERE phone LIKE :phone ORDER BY order_id DESC';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':phone', '%' . $phone . '%');
             $statement->execute();
-            $dbOrders = $statement->fetchAll();
-            if (!empty($dbOrders)) {
-                $results = $dbOrders;
-            }
+
+            return $statement->fetchAll();
         } catch (Throwable $e) {
-            // Chuyển sang fallback
+            return [];
         }
-
-        if (!empty($_SESSION['fallback_orders'])) {
-            foreach ($_SESSION['fallback_orders'] as $fo) {
-                $fPhone = preg_replace('/[^0-9]/', '', (string) ($fo['phone'] ?? ''));
-                if (!empty($fPhone) && strpos($fPhone, $phone) !== false) {
-                    $results[] = $fo;
-                }
-            }
-        }
-
-        if (empty($results)) {
-            foreach ($this->getDefaultOrders() as $mo) {
-                $mPhone = preg_replace('/[^0-9]/', '', (string) ($mo['phone'] ?? ''));
-                if (!empty($mPhone) && strpos($mPhone, $phone) !== false) {
-                    $results[] = $mo;
-                }
-            }
-        }
-
-        return $results;
     }
 
     /**
@@ -377,7 +276,7 @@ class OrderModel extends BaseModel
      * @param array $orderIds
      * @return array
      */
-    public function getOrdersByIds(array $orderIds)
+    public function getOrdersByIds(array $orderIds, $userId = null)
     {
         $cleanIds = array_filter(array_map('intval', $orderIds), fn($id) => $id > 0);
         if (empty($cleanIds)) {
@@ -386,7 +285,7 @@ class OrderModel extends BaseModel
 
         $orders = [];
         foreach ($cleanIds as $id) {
-            $order = $this->getById($id);
+            $order = $this->getById($id, $userId);
             if ($order) {
                 $orders[] = $order;
             }

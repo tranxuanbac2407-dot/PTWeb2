@@ -160,6 +160,13 @@ class AuthController
         $success   = $_SESSION['flash_success'] ?? null;
         unset($_SESSION['flash_success']);
 
+        $notice = $_SESSION['flash_error'] ?? null;
+        unset($_SESSION['flash_error']);
+
+        if ($notice !== null && !isset($errors['general'])) {
+            $errors['general'] = $notice;
+        }
+
         require_once PATH_VIEW_MAIN;
     }
 
@@ -204,7 +211,7 @@ class AuthController
                 ];
 
                 // $_SESSION['cart'] được giữ nguyên (không đụng tới).
-                $this->redirect('');
+                $this->redirect($this->resolveLoginRedirect());
             }
         }
 
@@ -218,7 +225,7 @@ class AuthController
     public function logout()
     {
         // Chỉ xóa trạng thái đăng nhập, KHÔNG xóa giỏ hàng.
-        unset($_SESSION['user']);
+        unset($_SESSION['user'], $_SESSION['login_redirect']);
 
         // Đổi id phiên để tránh session fixation.
         session_regenerate_id(true);
@@ -229,6 +236,18 @@ class AuthController
     /* =========================================================
        TIỆN ÍCH DÙNG CHUNG
        ========================================================= */
+
+    private function resolveLoginRedirect()
+    {
+        $redirect = $_SESSION['login_redirect'] ?? '';
+        unset($_SESSION['login_redirect']);
+
+        if (!is_string($redirect) || !in_array($redirect, ['checkout'], true)) {
+            return '';
+        }
+
+        return '?action=' . $redirect;
+    }
 
     /**
      * Lấy (hoặc tạo) CSRF token cho phiên hiện tại.
