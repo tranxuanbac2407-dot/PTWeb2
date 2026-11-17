@@ -176,7 +176,7 @@ $defaultAddress = $currentUser['address'] ?? '';
                                     $itemImgSrc   = get_product_image_url($itemImage);
                                 ?>
                                 <div class="checkout-item d-flex align-items-center gap-3 py-2 border-bottom">
-                                    <div style="width: 50px; height: 50px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                    <div style="width: 54px; height: 54px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0;">
                                         <?php if (!empty($itemImgSrc)): ?>
                                             <img src="<?= htmlspecialchars($itemImgSrc, ENT_QUOTES, 'UTF-8') ?>"
                                                  alt="<?= htmlspecialchars($item['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
@@ -188,16 +188,20 @@ $defaultAddress = $currentUser['address'] ?? '';
                                         <?php endif; ?>
                                     </div>
                                     <div class="flex-grow-1 min-w-0">
-                                        <div class="text-truncate fw-semibold small" title="<?= htmlspecialchars($item['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                        <div class="text-truncate fw-semibold small text-dark" title="<?= htmlspecialchars($item['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                                             <?= htmlspecialchars($item['name'] ?? 'Sản phẩm', ENT_QUOTES, 'UTF-8') ?>
                                         </div>
-                                        <div class="small text-muted">
-                                            <?= !empty($item['size']) ? 'Size ' . htmlspecialchars($item['size'], ENT_QUOTES, 'UTF-8') . ' | ' : '' ?>
-                                            <?= !empty($item['color']) ? htmlspecialchars($item['color'], ENT_QUOTES, 'UTF-8') . ' | ' : '' ?>
-                                            Số lượng: <strong><?= $itemQty ?></strong>
+                                        <div class="d-flex flex-wrap gap-1 mt-1 small text-muted">
+                                            <?php if (!empty($item['size'])): ?>
+                                                <span class="badge bg-light text-dark border py-0 px-1" style="font-size: 0.72rem;">Size: <?= htmlspecialchars($item['size'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($item['color'])): ?>
+                                                <span class="badge bg-light text-dark border py-0 px-1" style="font-size: 0.72rem;">Màu: <?= htmlspecialchars($item['color'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <?php endif; ?>
+                                            <span class="text-secondary ms-1" style="font-size: 0.75rem;">x<?= $itemQty ?></span>
                                         </div>
                                     </div>
-                                    <div class="text-end fw-bold small">
+                                    <div class="text-end fw-bold small text-accent text-nowrap">
                                         <?= number_format($itemSubtotal, 0, ',', '.') ?> đ
                                     </div>
                                 </div>
