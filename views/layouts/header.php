@@ -32,7 +32,13 @@ $isAdmin = $currentUserRole === 'admin';
 $cartCount = 0;
 $sessionCart = $_SESSION['cart'] ?? null;
 if (is_array($sessionCart)) {
-    $cartCount = (int) array_sum($sessionCart);
+    foreach ($sessionCart as $item) {
+        if (is_array($item)) {
+            $cartCount += (int) ($item['quantity'] ?? 1);
+        } else {
+            $cartCount += (int) $item;
+        }
+    }
 }
 ?>
 
