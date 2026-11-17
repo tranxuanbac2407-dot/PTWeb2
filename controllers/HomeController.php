@@ -416,19 +416,48 @@ class HomeController
                 $_SESSION['recent_orders'] = [];
             }
             $_SESSION['recent_orders'][] = $orderId;
+            $_SESSION['last_order_id'] = $orderId;
             $_SESSION['last_checkout_phone'] = $phone;
 
-            // Xóa sạch giỏ hàng sau khi đặt hàng thành công
+            // Tự động xóa sạch giỏ hàng trong session sau khi hệ thống tạo đơn thành công
             unset($_SESSION['cart']);
 
-            $_SESSION['flash_success'] = 'Chúc mừng bạn đã đặt hàng thành công! Đơn hàng #' . $orderId . ' đang được chuẩn bị để giao đến bạn.';
-            header('Location: ' . BASE_URL . '?action=order-history&new_order=' . $orderId);
+            $_SESSION['flash_success'] = 'Hệ thống đã tự động ghi nhận và tạo đơn hàng #' . $orderId . ' thành công!';
+            header('Location: ' . BASE_URL . '?action=order-success&id=' . $orderId);
             exit;
         }
 
-        $_SESSION['flash_error'] = 'Có lỗi xảy ra khi lưu đơn hàng, vui lòng thử lại sau ít phút.';
+        $_SESSION['flash_error'] = 'Có lỗi xảy ra khi tự động tạo đơn hàng, vui lòng thử lại sau ít phút.';
         header('Location: ' . BASE_URL . '?action=checkout');
         exit;
+    }
+
+    /**
+     * Trang thông báo xác nhận đặt hàng thành công (Order Success).
+     * Hiển thị biên nhận chi tiết ngay sau khi hệ thống tự động tạo đơn.
+     */
+    public function orderSuccess()
+    {
+        $orderId = (int) ($_GET['id'] ?? $_SESSION['last_order_id'] ?? 0);
+        if ($orderId <= 0) {
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->getById($orderId);
+
+        if (!$order) {
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $items = $orderModel->getOrderItems($orderId);
+
+        $title = 'Đặt hàng thành công #' . $orderId . ' | SPORTIX';
+        $view  = 'order-success';
+
+        require_once PATH_VIEW_MAIN;
     }
 
     /**
