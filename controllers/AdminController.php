@@ -764,9 +764,15 @@ class AdminController extends BaseController
         $keyword = is_string($keywordInput) ? $keywordInput : '';
         $status  = trim($_GET['status'] ?? '');
 
-        $orders       = $orderModel->getAllAdmin($keyword, $status);
         $flashSuccess = $this->getFlash('success');
         $flashError   = $this->getFlash('error');
+
+        try {
+            $orders = $orderModel->getAllAdmin($keyword, $status);
+        } catch (Throwable $e) {
+            $orders = [];
+            $flashError = 'Không thể tải danh sách đơn hàng: ' . $e->getMessage();
+        }
 
         $this->renderAdminPage(
             'orders/index',
