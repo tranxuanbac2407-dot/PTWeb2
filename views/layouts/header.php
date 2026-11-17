@@ -145,6 +145,7 @@ if (is_array($sessionCart)) {
                                 <li><a href="<?= BASE_URL ?>?action=admin">Trang quản trị</a></li>
                             <?php endif; ?>
                             <li><a href="<?= BASE_URL ?>?action=account">Thông tin tài khoản</a></li>
+                            <li><a href="<?= BASE_URL ?>?action=order-history">Lịch sử đơn hàng</a></li>
                             <li><a href="<?= BASE_URL ?>?action=logout">Đăng xuất</a></li>
                         </ul>
                     <?php else: ?>
@@ -158,6 +159,7 @@ if (is_array($sessionCart)) {
                         <ul class="account-submenu">
                             <li><a href="<?= BASE_URL ?>?action=login">Đăng nhập</a></li>
                             <li><a href="<?= BASE_URL ?>?action=register">Đăng ký</a></li>
+                            <li><a href="<?= BASE_URL ?>?action=order-history">Tra cứu đơn hàng</a></li>
                         </ul>
                     <?php endif; ?>
                 </div>
