@@ -228,8 +228,9 @@ $defaultAddress = $currentUser['address'] ?? '';
                             </span>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm">
-                            <i class="bi bi-check2-circle me-2"></i> Xác nhận đặt hàng
+                        <button type="submit" id="btn-place-order" class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center">
+                            <i class="bi bi-check2-circle me-2 fs-5"></i>
+                            <span id="btn-place-order-text">Xác nhận đặt hàng</span>
                         </button>
 
                         <div class="mt-3 text-center text-muted small">
@@ -243,3 +244,26 @@ $defaultAddress = $currentUser['address'] ?? '';
 
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkoutForm = document.getElementById('checkout-form');
+    const submitBtn = document.getElementById('btn-place-order');
+    const btnText = document.getElementById('btn-place-order-text');
+
+    if (checkoutForm && submitBtn) {
+        checkoutForm.addEventListener('submit', function(e) {
+            if (!checkoutForm.checkValidity()) {
+                return; // Để trình duyệt kích hoạt validation HTML5 nếu trường bắt buộc bị thiếu
+            }
+
+            // Vô hiệu hóa nút và hiển thị spinner để chống double-click gây trùng đơn
+            submitBtn.disabled = true;
+            submitBtn.classList.add('disabled');
+            if (btnText) {
+                btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang tự động tạo đơn hàng...';
+            }
+        });
+    }
+});
+</script>
