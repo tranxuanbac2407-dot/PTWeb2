@@ -79,6 +79,174 @@ class HomeController
         require_once PATH_VIEW_MAIN;
     }
 
+    /**
+     * Xem chi tiết sản phẩm và các thuộc tính (size, color, tồn kho, sản phẩm liên quan).
+     */
+    public function productDetail()
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $productModel = new ProductModel();
+        $product = $productModel->getById($id);
+
+        if (!$product) {
+            $_SESSION['flash_error'] = 'Sản phẩm không tồn tại hoặc đã ngừng kinh doanh.';
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        // Parse danh sách kích thước (Size)
+        $sizes = [];
+        if (!empty($product['size'])) {
+            $rawSizes = explode(',', (string) $product['size']);
+            foreach ($rawSizes as $s) {
+                $trimmed = trim($s);
+                if ($trimmed !== '') {
+                    $sizes[] = $trimmed;
+                }
+            }
+        }
+
+        // Parse danh sách màu sắc (Color)
+        $colors = [];
+        if (!empty($product['color'])) {
+            $rawColors = explode(',', (string) $product['color']);
+            foreach ($rawColors as $c) {
+                $trimmed = trim($c);
+                if ($trimmed !== '') {
+                    $colors[] = $trimmed;
+                }
+            }
+        }
+
+        // Lấy sản phẩm liên quan cùng danh mục
+        $categoryId = (int) ($product['category_id'] ?? 0);
+        $relatedProducts = $productModel->getRelatedProducts($categoryId, $id, 4);
+
+        $title = htmlspecialchars($product['product_name']) . ' | SPORTIX';
+        $view  = 'product-detail';
+
+        require_once PATH_VIEW_MAIN;
+    }
+
+    /**
+     * Thêm sản phẩm vào giỏ hàng.
+     */
+    public function addToCart()
+    {
+        $productId = (int) ($_POST['product_id'] ?? $_GET['add'] ?? 0);
+        $quantity  = (int) ($_POST['quantity'] ?? 1);
+        if ($quantity <= 0) {
+            $quantity = 1;
+        }
+
+        $size   = trim($_POST['size'] ?? '');
+        $color  = trim($_POST['color'] ?? '');
+        $buyNow = !empty($_POST['buy_now']);
+
+        if ($productId <= 0) {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $productModel = new ProductModel();
+        $product = $productModel->getById($productId);
+
+        if (!$product) {
+            $_SESSION['flash_error'] = 'Sản phẩm không tồn tại.';
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        // Tạo khóa định danh duy nhất cho từng thuộc tính trong giỏ
+        $cartKey = $productId . '_' . md5($size . '_' . $color);
+
+        if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+            $_SESSION['cart'] = [];
+        }
+
+        if (isset($_SESSION['cart'][$cartKey])) {
+            $_SESSION['cart'][$cartKey]['quantity'] += $quantity;
+        } else {
+            $_SESSION['cart'][$cartKey] = [
+                'product_id' => $productId,
+                'name'       => $product['product_name'],
+                'price'      => (float) $product['price'],
+                'image'      => $product['image'] ?? '',
+                'size'       => $size,
+                'color'      => $color,
+                'quantity'   => $quantity,
+            ];
+        }
+
+        $_SESSION['flash_success'] = 'Đã thêm "' . htmlspecialchars($product['product_name']) . '" vào giỏ hàng!';
+
+        if ($buyNow) {
+            header('Location: ' . BASE_URL . '?action=cart');
+        } else {
+            header('Location: ' . BASE_URL . '?action=product-detail&id=' . $productId);
+        }
+        exit;
+    }
+
+    /**
+     * Xem giỏ hàng của khách hàng.
+     */
+    public function cart()
+    {
+        $cart = $_SESSION['cart'] ?? [];
+        $totalAmount = 0;
+        foreach ($cart as $item) {
+            $totalAmount += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
+        }
+
+        $title = 'Giỏ hàng của bạn | SPORTIX';
+        $view  = 'cart';
+
+        require_once PATH_VIEW_MAIN;
+    }
+
+    /**
+     * Cập nhật số lượng sản phẩm trong giỏ hàng.
+     */
+    public function updateCart()
+    {
+        $cartKey  = trim($_POST['cart_key'] ?? '');
+        $quantity = (int) ($_POST['quantity'] ?? 1);
+
+        if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
+            if ($quantity > 0) {
+                $_SESSION['cart'][$cartKey]['quantity'] = $quantity;
+                $_SESSION['flash_success'] = 'Đã cập nhật số lượng giỏ hàng!';
+            } else {
+                unset($_SESSION['cart'][$cartKey]);
+                $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
+            }
+        }
+
+        header('Location: ' . BASE_URL . '?action=cart');
+        exit;
+    }
+
+    /**
+     * Xóa sản phẩm khỏi giỏ hàng.
+     */
+    public function removeFromCart()
+    {
+        $cartKey = trim($_GET['key'] ?? '');
+        if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
+            unset($_SESSION['cart'][$cartKey]);
+            $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
+        }
+
+        header('Location: ' . BASE_URL . '?action=cart');
+        exit;
+    }
+
     public function notFound()
     {
         header("Location: " . BASE_URL);
