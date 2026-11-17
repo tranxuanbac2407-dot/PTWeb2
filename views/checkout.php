@@ -52,6 +52,8 @@ $defaultAddress = $currentUser['address'] ?? '';
         </div>
 
         <form action="<?= BASE_URL ?>?action=place-order" method="post" id="checkout-form">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
+
             <div class="row g-4">
 
                 <!-- Cột trái: Thông tin nhận hàng & Phương thức thanh toán -->
