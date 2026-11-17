@@ -199,10 +199,14 @@ class HomeController
     public function cart()
     {
         $cart = $_SESSION['cart'] ?? [];
-        $totalAmount = 0;
+        $subtotal = 0;
         foreach ($cart as $item) {
-            $totalAmount += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
+            $subtotal += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
         }
+
+        // Tính phí vận chuyển: Miễn phí nếu tạm tính >= 500k, ngược lại 30.000đ (0đ nếu giỏ rỗng)
+        $shippingFee = ($subtotal > 0 && $subtotal < 500000) ? 30000 : 0;
+        $totalAmount = $subtotal + $shippingFee;
 
         $title = 'Giỏ hàng của bạn | SPORTIX';
         $view  = 'cart';
@@ -220,9 +224,35 @@ class HomeController
 
         if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
             if ($quantity > 0) {
-                $_SESSION['cart'][$cartKey]['quantity'] = $quantity;
+                $_SESSION['cart'][$cartKey]['quantity'] = min(99, $quantity);
                 $_SESSION['flash_success'] = 'Đã cập nhật số lượng giỏ hàng!';
             } else {
+                unset($_SESSION['cart'][$cartKey]);
+                $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
+            }
+        }
+
+        header('Location: ' . BASE_URL . '?action=cart');
+        exit;
+    }
+
+    /**
+     * Tăng hoặc giảm nhanh số lượng sản phẩm (+1 / -1) trong giỏ hàng.
+     */
+    public function changeCartQty()
+    {
+        $cartKey = trim($_GET['key'] ?? $_POST['cart_key'] ?? '');
+        $delta   = (int) ($_GET['delta'] ?? $_POST['delta'] ?? 1);
+
+        if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
+            $currentQty = (int) ($_SESSION['cart'][$cartKey]['quantity'] ?? 1);
+            $newQty     = $currentQty + $delta;
+
+            if ($newQty > 0) {
+                $_SESSION['cart'][$cartKey]['quantity'] = min(99, $newQty);
+                $_SESSION['flash_success'] = 'Đã cập nhật số lượng sản phẩm!';
+            } else {
+                // Nếu giảm về 0 thì tự động xóa món hàng đó khỏi giỏ
                 unset($_SESSION['cart'][$cartKey]);
                 $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
             }
@@ -241,6 +271,20 @@ class HomeController
         if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
             unset($_SESSION['cart'][$cartKey]);
             $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
+        }
+
+        header('Location: ' . BASE_URL . '?action=cart');
+        exit;
+    }
+
+    /**
+     * Xóa toàn bộ sản phẩm khỏi giỏ hàng.
+     */
+    public function clearCart()
+    {
+        if (!empty($_SESSION['cart'])) {
+            unset($_SESSION['cart']);
+            $_SESSION['flash_success'] = 'Đã xóa toàn bộ sản phẩm khỏi giỏ hàng!';
         }
 
         header('Location: ' . BASE_URL . '?action=cart');
