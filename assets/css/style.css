@@ -30,7 +30,7 @@ body {
 }
 
 .site-content {
-    flex: 1;
+    flex: 1 0 auto;
     padding: 1.5rem 0 3rem;
 }
 
@@ -684,6 +684,7 @@ label:focus-visible {
 /* ---------- Footer ---------- */
 
 .site-footer {
+    flex-shrink: 0;
     margin-top: auto;
     padding-top: 3rem;
     background: var(--sx-primary);
@@ -1313,8 +1314,6 @@ label:focus-visible {
     border-radius: var(--sx-radius);
     border: 1px solid var(--sx-border);
     background: var(--sx-bg);
-    overflow: hidden;
-    height: 100%;
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
@@ -1322,11 +1321,6 @@ label:focus-visible {
     transform: translateY(-4px);
     box-shadow: var(--sx-shadow);
     border-color: #cbd5e1;
-}
-
-.checkout-page .sx-card {
-    height: auto;
-    overflow: visible;
 }
 
 .product-thumb-wrapper {
