@@ -62,6 +62,11 @@ class UserModel extends BaseModel
      */
     public function create(array $data)
     {
+        $phone = $data['phone'] ?? null;
+        if ($phone !== null && !is_valid_phone($phone)) {
+            return 0;
+        }
+
         $sql = 'INSERT INTO ' . $this->table
              . ' (full_name, username, email, phone, password, role)'
              . ' VALUES (:full_name, :username, :email, :phone, :password, :role)';
@@ -71,7 +76,7 @@ class UserModel extends BaseModel
             ':full_name' => $data['full_name'],
             ':username'  => $data['username'],
             ':email'     => $data['email'],
-            ':phone'     => $data['phone'],
+            ':phone'     => $phone === null ? null : $phone,
             ':password'  => $data['password'],
             ':role'      => $data['role'],
         ]);

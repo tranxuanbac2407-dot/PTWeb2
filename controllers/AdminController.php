@@ -760,7 +760,8 @@ class AdminController extends BaseController
     {
         $orderModel = new OrderModel();
 
-        $keyword = trim($_GET['keyword'] ?? '');
+        $keywordInput = $_GET['keyword'] ?? '';
+        $keyword = is_string($keywordInput) ? $keywordInput : '';
         $status  = trim($_GET['status'] ?? '');
 
         $orders       = $orderModel->getAllAdmin($keyword, $status);

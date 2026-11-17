@@ -48,11 +48,13 @@ class AuthController
      */
     private function handleRegister()
     {
+        $phoneInput = $_POST['phone'] ?? '';
+
         $old = [
             'full_name' => trim($_POST['full_name'] ?? ''),
             'username'  => trim($_POST['username'] ?? ''),
             'email'     => trim($_POST['email'] ?? ''),
-            'phone'     => trim($_POST['phone'] ?? ''),
+            'phone'     => is_string($phoneInput) ? $phoneInput : '',
         ];
 
         $password        = (string) ($_POST['password'] ?? '');
@@ -87,8 +89,8 @@ class AuthController
         }
 
         // 4. Số điện thoại (không bắt buộc, chỉ kiểm tra khi có nhập)
-        if ($old['phone'] !== '' && !preg_match('/^[0-9+\-\s]{8,20}$/', $old['phone'])) {
-            $errors['phone'] = 'Số điện thoại không hợp lệ.';
+        if ($phoneInput !== '' && !is_valid_phone($phoneInput)) {
+            $errors['phone'] = 'Số điện thoại phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt.';
         }
 
         // 5. Mật khẩu tối thiểu 6 ký tự

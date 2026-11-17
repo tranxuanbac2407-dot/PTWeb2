@@ -22,8 +22,8 @@ class OrderModel extends BaseModel
             $params = [];
             if (!empty($keyword)) {
                 $sql .= 'AND (o.order_id = :order_id_exact OR o.receiver_name LIKE :keyword OR o.phone LIKE :keyword OR u.username LIKE :keyword) ';
-                $params[':order_id_exact'] = is_numeric($keyword) ? (int) $keyword : -1;
-                $params[':keyword'] = '%' . trim($keyword) . '%';
+                $params[':order_id_exact'] = (is_numeric($keyword) && !is_valid_phone($keyword)) ? (int) $keyword : -1;
+                $params[':keyword'] = '%' . $keyword . '%';
             }
 
             if (!empty($status)) {
@@ -130,8 +130,9 @@ class OrderModel extends BaseModel
     public function createOrder(array $orderData, array $cartItems)
     {
         $userId = (int) ($orderData['user_id'] ?? 0);
+        $phone  = $orderData['phone'] ?? null;
 
-        if ($userId <= 0 || empty($cartItems)) {
+        if ($userId <= 0 || empty($cartItems) || !is_valid_phone($phone)) {
             return 0;
         }
 
@@ -145,7 +146,7 @@ class OrderModel extends BaseModel
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $statement->bindValue(':receiver_name', trim($orderData['receiver_name'] ?? ''));
-            $statement->bindValue(':phone', trim($orderData['phone'] ?? ''));
+            $statement->bindValue(':phone', $phone, PDO::PARAM_STR);
             $statement->bindValue(':shipping_address', trim($orderData['shipping_address'] ?? ''));
             $statement->bindValue(':total_amount', (float) ($orderData['total_amount'] ?? 0));
             $statement->bindValue(':payment_method', trim($orderData['payment_method'] ?? 'cod'));
@@ -253,15 +254,14 @@ class OrderModel extends BaseModel
      */
     public function getOrdersByPhone($phone)
     {
-        $phone = preg_replace('/[^0-9]/', '', (string) $phone);
-        if (empty($phone)) {
+        if (!is_valid_phone($phone)) {
             return [];
         }
 
         try {
             $sql = 'SELECT * FROM ' . $this->table . ' WHERE phone LIKE :phone ORDER BY order_id DESC';
             $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':phone', '%' . $phone . '%');
+            $statement->bindValue(':phone', '%' . $phone . '%', PDO::PARAM_STR);
             $statement->execute();
 
             return $statement->fetchAll();
