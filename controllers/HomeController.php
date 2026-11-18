@@ -424,18 +424,9 @@ class HomeController extends BaseController
         $orderId = $orderModel->createOrder($orderData, $cart);
 
         if ($orderId > 0) {
-            // Lưu ID đơn hàng vào danh sách đơn gần đây trong session
-            if (!isset($_SESSION['recent_orders']) || !is_array($_SESSION['recent_orders'])) {
-                $_SESSION['recent_orders'] = [];
-            }
-            $_SESSION['recent_orders'][] = $orderId;
-            $_SESSION['last_order_id'] = $orderId;
-            $_SESSION['last_checkout_phone'] = $phone;
-
             // Tự động xóa sạch giỏ hàng trong session sau khi hệ thống tạo đơn thành công
             unset($_SESSION['cart']);
 
-            $_SESSION['flash_success'] = 'Hệ thống đã tự động ghi nhận và tạo đơn hàng #' . $orderId . ' thành công!';
             header('Location: ' . BASE_URL . '?action=order-success&id=' . $orderId);
             exit;
         }
@@ -451,9 +442,9 @@ class HomeController extends BaseController
      */
     public function orderSuccess()
     {
-        $authenticatedUser = $this->requireAuthenticatedUser();
+        $authenticatedUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để xem thông tin đơn hàng.');
 
-        $orderId = (int) ($_GET['id'] ?? $_SESSION['last_order_id'] ?? 0);
+        $orderId = (int) ($_GET['id'] ?? 0);
         if ($orderId <= 0) {
             header('Location: ' . BASE_URL . '?action=order-history');
             exit;
@@ -481,7 +472,7 @@ class HomeController extends BaseController
      */
     public function orderHistory()
     {
-        $currentUser = $this->requireAuthenticatedUser();
+        $currentUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để xem lịch sử đơn hàng.');
 
         $orderModel = new OrderModel();
         $orders = $orderModel->getOrdersByUserId((int) $currentUser['id']);
@@ -504,7 +495,7 @@ class HomeController extends BaseController
      */
     public function orderDetailCustomer()
     {
-        $authenticatedUser = $this->requireAuthenticatedUser();
+        $authenticatedUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để xem chi tiết đơn hàng.');
 
         $orderId = (int) ($_GET['id'] ?? 0);
         if ($orderId <= 0) {

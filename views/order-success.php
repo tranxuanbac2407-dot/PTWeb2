@@ -21,6 +21,23 @@ function get_order_success_payment_name($method) {
         default:        return 'Thanh toán tiền mặt khi nhận hàng (COD)';
     }
 }
+
+function get_order_success_status_badge($status) {
+    switch ($status) {
+        case 'pending':
+            return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận</span>';
+        case 'processing':
+            return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded-pill"><i class="bi bi-box-seam me-1"></i>Đang xử lý</span>';
+        case 'shipping':
+            return '<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill"><i class="bi bi-truck me-1"></i>Đang giao hàng</span>';
+        case 'completed':
+            return '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Đã hoàn thành</span>';
+        case 'cancelled':
+            return '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill"><i class="bi bi-x-circle me-1"></i>Đã hủy</span>';
+        default:
+            return '<span class="badge bg-light text-dark border px-2 py-1 rounded-pill"><i class="bi bi-question-circle me-1"></i>Không xác định</span>';
+    }
+}
 ?>
 
 <div class="order-success-page py-5">
@@ -63,9 +80,7 @@ function get_order_success_payment_name($method) {
 
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="text-muted">Trạng thái:</span>
-                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 rounded-pill">
-                                <i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận
-                            </span>
+                            <?= get_order_success_status_badge($status) ?>
                         </div>
 
                         <div class="d-flex justify-content-between">
