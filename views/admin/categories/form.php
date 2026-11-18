@@ -44,7 +44,7 @@ $valDesc = $old['description'] ?? ($category['description'] ?? '');
 
     <div class="row g-4">
         <!-- Khối biểu mẫu chính -->
-        <div class="col-12 col-lg-8">
+        <div class="col-12">
             <div class="admin-card">
                 <div class="admin-card-header">
                     <h3>
@@ -89,7 +89,7 @@ $valDesc = $old['description'] ?? ($category['description'] ?? '');
                             </label>
                             <textarea id="description"
                                       name="description"
-                                      rows="4"
+                                      rows="5"
                                       class="admin-form-input admin-form-textarea <?= !empty($errors['description']) ? 'is-invalid' : '' ?>"
                                       placeholder="Mô tả tóm tắt về loại sản phẩm hoặc nhóm đối tượng khách hàng của danh mục này..."><?= htmlspecialchars($valDesc, ENT_QUOTES, 'UTF-8') ?></textarea>
                             <?php if (!empty($errors['description'])): ?>
