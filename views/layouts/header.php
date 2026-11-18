@@ -29,6 +29,9 @@ if (is_array($sessionUser)) {
 
 $isAdmin = $currentUserRole === 'admin';
 
+$categoryModel = new CategoryModel();
+$allCategories = $categoryModel->getAll();
+
 $cartCount = 0;
 $sessionCart = $_SESSION['cart'] ?? null;
 if (is_array($sessionCart)) {
@@ -67,36 +70,46 @@ if (is_array($sessionCart)) {
                     <li class="has-submenu">
                         <a href="<?= BASE_URL ?>?action=products&amp;category=nam">Nam <span class="caret">&#9662;</span></a>
                         <ul class="submenu">
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=ao">Áo thể thao nam</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=quan">Quần thể thao nam</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=bo">Bộ đồ thể thao nam</a></li>
+                            <?php foreach ($allCategories as $cat): ?>
+                                <li><a href="<?= BASE_URL ?>?action=products&amp;category=nam&amp;type=<?= $cat['categories_id'] ?>"><?= htmlspecialchars($cat['categories_name'], ENT_QUOTES, 'UTF-8') ?></a></li>
+                            <?php endforeach; ?>
                         </ul>
                     </li>
 
                     <li class="has-submenu">
                         <a href="<?= BASE_URL ?>?action=products&amp;category=nu">Nữ <span class="caret">&#9662;</span></a>
                         <ul class="submenu">
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=ao">Áo thể thao nữ</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=quan">Quần thể thao nữ</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=bo">Bộ đồ thể thao nữ</a></li>
+                            <?php foreach ($allCategories as $cat): ?>
+                                <li><a href="<?= BASE_URL ?>?action=products&amp;category=nu&amp;type=<?= $cat['categories_id'] ?>"><?= htmlspecialchars($cat['categories_name'], ENT_QUOTES, 'UTF-8') ?></a></li>
+                            <?php endforeach; ?>
                         </ul>
                     </li>
 
                     <li class="has-submenu">
                         <a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien">Phụ kiện <span class="caret">&#9662;</span></a>
                         <ul class="submenu">
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=giay">Giày &amp; dép thể thao</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=balo">Balo &amp; túi thể thao</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=khac">Mũ &amp; phụ kiện khác</a></li>
+                            <?php foreach ($allCategories as $cat): ?>
+                                <li><a href="<?= BASE_URL ?>?action=products&amp;category=phu-kien&amp;type=<?= $cat['categories_id'] ?>"><?= htmlspecialchars($cat['categories_name'], ENT_QUOTES, 'UTF-8') ?></a></li>
+                            <?php endforeach; ?>
                         </ul>
                     </li>
 
-                    <li>
-                        <a href="<?= BASE_URL ?>?action=products&amp;filter=new">Sản phẩm mới</a>
+                    <li class="has-submenu">
+                        <a href="<?= BASE_URL ?>?action=products&amp;filter=new">Sản phẩm mới <span class="caret">&#9662;</span></a>
+                        <ul class="submenu">
+                            <?php foreach ($allCategories as $cat): ?>
+                                <li><a href="<?= BASE_URL ?>?action=products&amp;filter=new&amp;category=<?= $cat['categories_id'] ?>"><?= htmlspecialchars($cat['categories_name'], ENT_QUOTES, 'UTF-8') ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
                     </li>
 
-                    <li>
-                        <a class="nav-sale" href="<?= BASE_URL ?>?action=products&amp;filter=sale">Khuyến mãi</a>
+                    <li class="has-submenu">
+                        <a class="nav-sale" href="<?= BASE_URL ?>?action=products&amp;filter=sale">Khuyến mãi <span class="caret">&#9662;</span></a>
+                        <ul class="submenu">
+                            <?php foreach ($allCategories as $cat): ?>
+                                <li><a href="<?= BASE_URL ?>?action=products&amp;filter=sale&amp;category=<?= $cat['categories_id'] ?>"><?= htmlspecialchars($cat['categories_name'], ENT_QUOTES, 'UTF-8') ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
                     </li>
                 </ul>
             </nav>
