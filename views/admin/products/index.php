@@ -41,44 +41,47 @@ $total        = count($products);
             <form class="admin-search-form admin-filter-form" action="<?= BASE_URL ?>" method="get" role="search">
                 <input type="hidden" name="action" value="admin-products">
 
-                <div class="admin-filter-group">
-                    <!-- Ô tìm kiếm tên sản phẩm -->
-                    <div class="admin-search-input-group">
-                        <i class="bi bi-search admin-search-icon" aria-hidden="true"></i>
-                        <input type="text"
-                               name="keyword"
-                               class="admin-form-input admin-search-input"
-                               placeholder="Tìm tên sản phẩm..."
-                               value="<?= htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
-                        <?php if ($keyword !== ''): ?>
-                            <a href="<?= BASE_URL ?>?action=admin-products<?= $categoryId > 0 ? '&amp;category_id=' . $categoryId : '' ?>"
-                               class="admin-search-clear"
-                               title="Xóa từ khóa tìm kiếm">
-                                <i class="bi bi-x-circle-fill"></i>
-                            </a>
-                        <?php endif; ?>
+                <div class="admin-search-row">
+                    <div class="admin-search-field admin-search-field--grow">
+                        <div class="admin-search-input-group">
+                            <i class="bi bi-search admin-search-icon" aria-hidden="true"></i>
+                            <input type="text"
+                                   name="keyword"
+                                   class="admin-form-input admin-search-input"
+                                   placeholder="Tìm tên sản phẩm..."
+                                   value="<?= htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') ?>">
+                            <?php if ($keyword !== ''): ?>
+                                <a href="<?= BASE_URL ?>?action=admin-products<?= $categoryId > 0 ? '&amp;category_id=' . $categoryId : '' ?>"
+                                   class="admin-search-clear"
+                                   title="Xóa từ khóa tìm kiếm">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </a>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
-                    <!-- Dropdown lọc danh mục -->
-                    <select name="category_id" class="admin-form-input admin-select-filter" aria-label="Lọc theo danh mục" onchange="this.form.submit()">
-                        <option value="0">Tất cả danh mục</option>
-                        <?php foreach ($categories as $cat): ?>
-                            <?php
-                                $cId   = (int) ($cat['categories_id'] ?? 0);
-                                $cName = (string) ($cat['categories_name'] ?? '');
-                            ?>
-                            <option value="<?= $cId ?>" <?= $categoryId === $cId ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cName, ENT_QUOTES, 'UTF-8') ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="admin-search-field admin-search-field--filter">
+                        <select name="category_id" class="admin-form-input admin-select-filter" aria-label="Lọc theo danh mục" onchange="this.form.submit()">
+                            <option value="0">Tất cả danh mục</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <?php
+                                    $cId   = (int) ($cat['categories_id'] ?? 0);
+                                    $cName = (string) ($cat['categories_name'] ?? '');
+                                ?>
+                                <option value="<?= $cId ?>" <?= $categoryId === $cId ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($cName, ENT_QUOTES, 'UTF-8') ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                    <button type="submit" class="admin-btn admin-btn-secondary">
-                        <i class="bi bi-funnel"></i> Lọc
+                    <button type="submit" class="admin-btn admin-btn-secondary admin-search-btn">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Tìm kiếm</span>
                     </button>
 
                     <?php if ($keyword !== '' || $categoryId > 0): ?>
-                        <a href="<?= BASE_URL ?>?action=admin-products" class="admin-btn admin-btn-outline" title="Đặt lại bộ lọc">
+                        <a href="<?= BASE_URL ?>?action=admin-products" class="admin-btn admin-btn-outline admin-search-reset" title="Đặt lại bộ lọc">
                             <i class="bi bi-arrow-counterclockwise"></i> Đặt lại
                         </a>
                     <?php endif; ?>

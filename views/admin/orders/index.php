@@ -41,8 +41,8 @@ $statusLabels = [
             <form class="admin-search-form admin-filter-form" action="<?= BASE_URL ?>" method="get" role="search">
                 <input type="hidden" name="action" value="admin-orders">
 
-                <div class="admin-filter-group">
-                    <div class="admin-search-combo">
+                <div class="admin-search-row">
+                    <div class="admin-search-field admin-search-field--grow">
                         <div class="admin-search-input-group">
                             <i class="bi bi-search admin-search-icon" aria-hidden="true"></i>
                             <input type="text"
@@ -58,35 +58,35 @@ $statusLabels = [
                                 </a>
                             <?php endif; ?>
                         </div>
-                        <button type="submit" class="admin-btn admin-btn-secondary admin-search-btn">
-                            <i class="bi bi-search" aria-hidden="true"></i>
-                            <span>Tìm kiếm</span>
-                        </button>
                     </div>
 
-                    <!-- Dropdown lọc theo trạng thái đơn hàng -->
-                    <select name="status" class="admin-form-input admin-select-filter" aria-label="Lọc theo trạng thái" onchange="this.form.submit()">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Chờ xử lý</option>
-                        <option value="processing" <?= $status === 'processing' ? 'selected' : '' ?>>Đang xử lý</option>
-                        <option value="shipping" <?= $status === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
-                        <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
-                        <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
-                    </select>
+                    <div class="admin-search-field admin-search-field--filter">
+                        <select name="status" class="admin-form-input admin-select-filter" aria-label="Lọc theo trạng thái" onchange="this.form.submit()">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Chờ xử lý</option>
+                            <option value="processing" <?= $status === 'processing' ? 'selected' : '' ?>>Đang xử lý</option>
+                            <option value="shipping" <?= $status === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
+                            <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
+                            <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="admin-btn admin-btn-secondary admin-search-btn">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Tìm kiếm</span>
+                    </button>
 
                     <?php if ($keyword !== '' || $status !== ''): ?>
-                        <a href="<?= BASE_URL ?>?action=admin-orders" class="admin-btn admin-btn-outline" title="Đặt lại bộ lọc">
+                        <a href="<?= BASE_URL ?>?action=admin-orders" class="admin-btn admin-btn-outline admin-search-reset" title="Đặt lại bộ lọc">
                             <i class="bi bi-arrow-counterclockwise"></i> Đặt lại
                         </a>
                     <?php endif; ?>
+
+                    <span class="admin-search-note">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>Hệ thống tự động cập nhật doanh số
+                    </span>
                 </div>
             </form>
-        </div>
-
-        <div class="admin-toolbar-right">
-            <span class="text-muted small">
-                <i class="bi bi-info-circle me-1"></i>Hệ thống tự động cập nhật doanh số
-            </span>
         </div>
     </div>
 
