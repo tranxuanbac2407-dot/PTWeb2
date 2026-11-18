@@ -127,7 +127,7 @@ if (is_array($sessionCart)) {
 
                 <div class="account-menu">
                     <?php if ($currentUserName): ?>
-                        <a class="account-toggle" href="<?= BASE_URL ?>?action=account">
+                        <a class="account-toggle" href="<?= BASE_URL ?>?action=order-history">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
                                 <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4"/>
                             </svg>
@@ -138,7 +138,6 @@ if (is_array($sessionCart)) {
                             <?php if ($isAdmin): ?>
                                 <li><a href="<?= BASE_URL ?>?action=admin">Trang quản trị</a></li>
                             <?php endif; ?>
-                            <li><a href="<?= BASE_URL ?>?action=account">Thông tin tài khoản</a></li>
                             <li><a href="<?= BASE_URL ?>?action=order-history">Lịch sử đơn hàng</a></li>
                             <li><a href="<?= BASE_URL ?>?action=logout">Đăng xuất</a></li>
                         </ul>
@@ -153,7 +152,7 @@ if (is_array($sessionCart)) {
                         <ul class="account-submenu">
                             <li><a href="<?= BASE_URL ?>?action=login">Đăng nhập</a></li>
                             <li><a href="<?= BASE_URL ?>?action=register">Đăng ký</a></li>
-                            <li><a href="<?= BASE_URL ?>?action=order-history">Tra cứu đơn hàng</a></li>
+                            <li><a href="<?= BASE_URL ?>?action=login">Đăng nhập để xem đơn hàng</a></li>
                         </ul>
                     <?php endif; ?>
                 </div>
