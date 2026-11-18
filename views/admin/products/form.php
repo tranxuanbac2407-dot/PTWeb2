@@ -57,8 +57,8 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 
         <div class="row g-4">
-            <!-- Cột trái: Thông tin sản phẩm & Quản lý ảnh -->
-            <div class="col-12 col-lg-8">
+            <!-- Cột thông tin sản phẩm & Quản lý ảnh -->
+            <div class="<?= $isEdit ? 'col-12 col-lg-8' : 'col-12' ?>">
 
                 <!-- 1. THÔNG TIN CHÍNH -->
                 <div class="admin-card">
@@ -350,57 +350,28 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
 
             </div>
 
-            <!-- Cột phải: Gợi ý & Trạng thái -->
+            <?php if ($isEdit): ?>
+            <!-- Cột phải: Thông tin bản ghi (chỉ hiển thị khi chỉnh sửa) -->
             <div class="col-12 col-lg-4">
                 <div class="admin-card">
                     <div class="admin-card-header">
                         <h3>
-                            <i class="bi bi-lightbulb" aria-hidden="true"></i>
-                            <span>Hướng dẫn quản lý</span>
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span>Thông tin bản ghi</span>
                         </h3>
                     </div>
                     <div class="admin-card-body">
-                        <ul class="admin-tips-list">
-                            <li>
-                                <strong><i class="bi bi-check2-circle text-accent"></i> Tiêu chuẩn hình ảnh</strong>
-                                <span>Nên chọn ảnh vuông (tỷ lệ 1:1) hoặc 4:3, phông nền sáng rõ ràng, độ phân giải khuyến nghị từ 800x800px trở lên để hiển thị đẹp mắt trên cả desktop và mobile.</span>
-                            </li>
-                            <li>
-                                <strong><i class="bi bi-check2-circle text-accent"></i> Quản lý tệp tự động</strong>
-                                <span>Khi bạn cập nhật ảnh mới hoặc xóa ảnh, hệ thống sẽ tự động dọn dẹp ảnh cũ trong thư mục tải lên để tiết kiệm dung lượng lưu trữ máy chủ.</span>
-                            </li>
-                            <li>
-                                <strong><i class="bi bi-check2-circle text-accent"></i> Tồn kho và cảnh báo</strong>
-                                <span>Số lượng tồn kho <= 10 sẽ được đánh dấu "Sắp hết hàng", khi về 0 sẽ hiển thị nhãn "Hết hàng" để nhắc nhở người quản trị nhập thêm.</span>
-                            </li>
-                            <li>
-                                <strong><i class="bi bi-check2-circle text-accent"></i> Kích thước & Màu sắc</strong>
-                                <span>Nhập các thuộc tính phân cách nhau bởi dấu phẩy (ví dụ: S, M, L hoặc Đen, Trắng) để hiển thị đồng bộ ở trang chi tiết sản phẩm.</span>
-                            </li>
-                        </ul>
+                        <p class="mb-2"><strong>Mã sản phẩm:</strong> #<?= $pId ?></p>
+                        <p class="mb-3"><strong>Tên hiện tại:</strong> <?= htmlspecialchars($product['product_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+                        <a href="<?= BASE_URL ?>?action=product-detail&amp;id=<?= $pId ?>"
+                           target="_blank"
+                           class="admin-btn admin-btn-outline admin-btn-sm w-100">
+                            <i class="bi bi-box-arrow-up-right"></i> Xem trên website
+                        </a>
                     </div>
                 </div>
-
-                <?php if ($isEdit): ?>
-                    <div class="admin-card" style="margin-top: 1.5rem;">
-                        <div class="admin-card-header">
-                            <h3>
-                                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                                <span>Thông tin bản ghi</span>
-                            </h3>
-                        </div>
-                        <div class="admin-card-body">
-                            <p class="mb-2"><strong>Mã sản phẩm:</strong> #<?= $pId ?></p>
-                            <p class="mb-3"><strong>Tên hiện tại:</strong> <?= htmlspecialchars($product['product_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
-                            <a href="<?= BASE_URL ?>?action=product-detail&amp;id=<?= $pId ?>"
-                               target="_blank"
-                               class="admin-btn admin-btn-outline admin-btn-sm w-100">
-                                <i class="bi bi-box-arrow-up-right"></i> Xem trên website
-                            </a>
-                        </div>
-                    </div>
-                <?php endif; ?>
             </div>
+            <?php endif; ?>
         </div>
     </form>
 
