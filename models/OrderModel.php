@@ -242,54 +242,6 @@ class OrderModel extends BaseModel
     }
 
     /**
-     * Tìm danh sách đơn hàng theo số điện thoại (hỗ trợ khách tra cứu lịch sử mua hàng).
-     *
-     * @param string $phone
-     * @return array
-     */
-    public function getOrdersByPhone($phone)
-    {
-        if (!is_valid_phone($phone)) {
-            return [];
-        }
-
-        try {
-            $sql = 'SELECT * FROM ' . $this->table . ' WHERE phone LIKE :phone ORDER BY order_id DESC';
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':phone', '%' . $phone . '%', PDO::PARAM_STR);
-            $statement->execute();
-
-            return $statement->fetchAll();
-        } catch (Throwable $e) {
-            return [];
-        }
-    }
-
-    /**
-     * Lấy danh sách đơn hàng từ mảng ID (dành cho các đơn vừa đặt trong phiên của khách).
-     *
-     * @param array $orderIds
-     * @return array
-     */
-    public function getOrdersByIds(array $orderIds, $userId = null)
-    {
-        $cleanIds = array_filter(array_map('intval', $orderIds), fn($id) => $id > 0);
-        if (empty($cleanIds)) {
-            return [];
-        }
-
-        $orders = [];
-        foreach ($cleanIds as $id) {
-            $order = $this->getById($id, $userId);
-            if ($order) {
-                $orders[] = $order;
-            }
-        }
-
-        return $orders;
-    }
-
-    /**
      * Cập nhật trạng thái đơn hàng.
      *
      * @param int $orderId

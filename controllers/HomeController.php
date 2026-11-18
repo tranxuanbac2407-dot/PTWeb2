@@ -481,33 +481,10 @@ class HomeController extends BaseController
      */
     public function orderHistory()
     {
+        $currentUser = $this->requireAuthenticatedUser();
+
         $orderModel = new OrderModel();
-        $currentUser = $_SESSION['user'] ?? null;
-        $userId = (int) ($currentUser['id'] ?? 0);
-
-        $phoneInput  = $_GET['phone'] ?? $_SESSION['last_checkout_phone'] ?? '';
-        $searchPhone = is_string($phoneInput) ? $phoneInput : '';
-        if (!is_string($phoneInput)) {
-            $_GET['phone'] = '';
-        }
-        $recentIds   = $_SESSION['recent_orders'] ?? [];
-
-        if ($phoneInput !== '' && !is_valid_phone($phoneInput)) {
-            $_SESSION['flash_error'] = 'Số điện thoại tra cứu phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt.';
-        }
-
-        $orders = [];
-
-        if ($userId > 0) {
-            // Nếu đã đăng nhập: lấy toàn bộ đơn hàng của tài khoản
-            $orders = $orderModel->getOrdersByUserId($userId);
-        } elseif (is_valid_phone($searchPhone)) {
-            // Tra cứu theo số điện thoại
-            $orders = $orderModel->getOrdersByPhone($searchPhone);
-        } elseif ($searchPhone === '' && !empty($recentIds)) {
-            // Lấy các đơn vừa đặt trong phiên hiện tại
-            $orders = $orderModel->getOrdersByIds($recentIds, null);
-        }
+        $orders = $orderModel->getOrdersByUserId((int) $currentUser['id']);
 
         // Bổ sung danh sách sản phẩm tóm tắt cho từng đơn hàng
         foreach ($orders as &$ord) {

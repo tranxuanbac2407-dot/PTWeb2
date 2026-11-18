@@ -4,11 +4,8 @@
  * Giao diện lịch sử đơn hàng của khách hàng SPORTIX.
  */
 
-$currentUser = $_SESSION['user'] ?? null;
-$userId      = (int) ($currentUser['id'] ?? 0);
+$currentUser = $currentUser ?? null;
 $orders      = $orders ?? [];
-$searchPhone = htmlspecialchars($_GET['phone'] ?? $_SESSION['last_checkout_phone'] ?? '', ENT_QUOTES, 'UTF-8');
-$newOrderId  = (int) ($_GET['new_order'] ?? 0);
 
 $flashSuccess = $_SESSION['flash_success'] ?? null;
 $flashError   = $_SESSION['flash_error'] ?? null;
@@ -49,9 +46,6 @@ function get_payment_name($method) {
         <nav class="sx-breadcrumb mb-4" aria-label="Đường dẫn trang">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="<?= BASE_URL ?>">Trang chủ</a></li>
-                <?php if ($currentUser): ?>
-                    <li class="breadcrumb-item"><a href="<?= BASE_URL ?>?action=account">Tài khoản</a></li>
-                <?php endif; ?>
                 <li class="breadcrumb-item active" aria-current="page">Lịch sử đơn hàng</li>
             </ol>
         </nav>
@@ -79,29 +73,9 @@ function get_payment_name($method) {
                     <i class="bi bi-clock-history text-accent me-2"></i>Lịch sử mua hàng
                 </h1>
                 <p class="text-muted mb-0 small">
-                    <?= $currentUser ? 'Quản lý và theo dõi tiến độ các đơn hàng của tài khoản ' . htmlspecialchars($currentUser['username'], ENT_QUOTES, 'UTF-8') : 'Theo dõi trạng thái các đơn hàng bạn đã đặt tại SPORTIX' ?>
+                    Quản lý và theo dõi tiến độ các đơn hàng của tài khoản <?= htmlspecialchars($currentUser['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                 </p>
             </div>
-
-            <!-- Form tra cứu theo số điện thoại (tiện lợi cho cả khách chưa đăng nhập) -->
-            <form action="<?= BASE_URL ?>" method="get" class="d-flex align-items-center gap-2">
-                <input type="hidden" name="action" value="order-history">
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                    <input type="tel"
-                           name="phone"
-                           class="form-control"
-                           placeholder="Tra cứu SĐT (10 số)..."
-                           pattern="[0-9]{10}"
-                           minlength="10"
-                           maxlength="10"
-                           inputmode="numeric"
-                           title="Số điện thoại tra cứu phải có đúng 10 chữ số, không chứa chữ cái, khoảng trắng hoặc ký tự đặc biệt."
-                           value="<?= $searchPhone ?>"
-                           style="min-width: 190px;">
-                    <button class="btn btn-outline-primary" type="submit">Tra cứu</button>
-                </div>
-            </form>
         </div>
 
         <?php if (!empty($orders)): ?>
@@ -109,12 +83,11 @@ function get_payment_name($method) {
                 <?php foreach ($orders as $order): ?>
                     <?php
                         $ordId     = (int) ($order['order_id'] ?? 0);
-                        $isNew     = ($newOrderId > 0 && $ordId === $newOrderId);
                         $items     = $order['items'] ?? [];
                         $total     = (float) ($order['total_amount'] ?? 0);
                         $orderDate = !empty($order['order_date']) ? date('d/m/Y - H:i', strtotime($order['order_date'])) : 'Vừa xong';
                     ?>
-                    <div class="order-card sx-card p-0 overflow-hidden <?= $isNew ? 'border border-2 border-primary shadow-sm' : '' ?>">
+                    <div class="order-card sx-card p-0 overflow-hidden">
 
                         <!-- Header card -->
                         <div class="order-card-header p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -122,9 +95,6 @@ function get_payment_name($method) {
                                 <span class="fs-6 fw-bold text-dark">
                                     Đơn hàng <span class="text-accent">#<?= $ordId ?></span>
                                 </span>
-                                <?php if ($isNew): ?>
-                                    <span class="badge bg-primary text-white">Đơn hàng vừa đặt</span>
-                                <?php endif; ?>
                                 <span class="text-muted small">
                                     <i class="bi bi-calendar3 me-1"></i><?= $orderDate ?>
                                 </span>
@@ -224,17 +194,12 @@ function get_payment_name($method) {
                 <i class="bi bi-bag-x text-muted" style="font-size: 4rem;"></i>
                 <h2 class="fs-4 fw-bold mt-3 mb-2">Chưa có đơn hàng nào</h2>
                 <p class="text-muted mb-4">
-                    <?= !empty($searchPhone) ? 'Không tìm thấy đơn hàng nào với số điện thoại "' . $searchPhone . '". Bạn vui lòng kiểm tra lại!' : 'Bạn chưa có đơn đặt hàng nào tại SPORTIX. Hãy thỏa sức mua sắm các sản phẩm thể thao ngay hôm nay!' ?>
+                    Bạn chưa có đơn đặt hàng nào tại SPORTIX. Hãy thỏa sức mua sắm các sản phẩm thể thao ngay hôm nay!
                 </p>
                 <div class="d-flex justify-content-center gap-3">
                     <a href="<?= BASE_URL ?>?action=products" class="btn btn-primary btn-lg">
                         <i class="bi bi-bag-heart me-2"></i> Khám phá sản phẩm
                     </a>
-                    <?php if (!$currentUser): ?>
-                        <a href="<?= BASE_URL ?>?action=login" class="btn btn-outline-primary btn-lg">
-                            <i class="bi bi-box-arrow-in-right me-2"></i> Đăng nhập tài khoản
-                        </a>
-                    <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>

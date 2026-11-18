@@ -226,8 +226,8 @@ class AuthController
 
     public function logout()
     {
-        // Chỉ xóa trạng thái đăng nhập, KHÔNG xóa giỏ hàng.
-        unset($_SESSION['user'], $_SESSION['login_redirect']);
+        // Chỉ xóa trạng thái đăng nhập và dữ liệu đơn hàng tạm, KHÔNG xóa giỏ hàng.
+        unset($_SESSION['user'], $_SESSION['login_redirect'], $_SESSION['last_checkout_phone'], $_SESSION['recent_orders'], $_SESSION['last_order_id']);
 
         // Đổi id phiên để tránh session fixation.
         session_regenerate_id(true);
