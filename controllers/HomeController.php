@@ -58,7 +58,7 @@ class HomeController extends BaseController
         $bestSellingProducts = $productModel->getBestSellingProducts(8);
 
         $title = 'SPORTIX | Thời trang thể thao nam & nữ chính hãng';
-        $view  = 'home';
+        $view  = 'client/home';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -74,7 +74,7 @@ class HomeController extends BaseController
         }
 
         $title = 'Tìm kiếm "' . htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8') . '" | SPORTIX';
-        $view  = 'search';
+        $view  = 'client/search';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -128,7 +128,7 @@ class HomeController extends BaseController
         $relatedProducts = $productModel->getRelatedProducts($categoryId, $id, 4);
 
         $title = htmlspecialchars($product['product_name']) . ' | SPORTIX';
-        $view  = 'product-detail';
+        $view  = 'client/product-detail';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -232,7 +232,7 @@ class HomeController extends BaseController
         $totalAmount = $subtotal + $shippingFee;
 
         $title = 'Giỏ hàng của bạn (' . $totalQuantity . ' món) | SPORTIX';
-        $view  = 'cart';
+        $view  = 'client/cart';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -334,7 +334,7 @@ class HomeController extends BaseController
         $csrfToken = $this->csrfToken();
 
         $title = 'Thanh toán & Đặt hàng | SPORTIX';
-        $view  = 'checkout';
+        $view  = 'client/checkout';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -462,7 +462,7 @@ class HomeController extends BaseController
         $items = $orderModel->getOrderItems($orderId);
 
         $title = 'Đặt hàng thành công #' . $orderId . ' | SPORTIX';
-        $view  = 'order-success';
+        $view  = 'client/order-success';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -485,7 +485,7 @@ class HomeController extends BaseController
         unset($ord);
 
         $title = 'Lịch sử đơn hàng | SPORTIX';
-        $view  = 'order-history';
+        $view  = 'client/order-history';
 
         require_once PATH_VIEW_MAIN;
     }
@@ -515,7 +515,7 @@ class HomeController extends BaseController
         $items = $orderModel->getOrderItems($orderId);
 
         $title = 'Chi tiết đơn hàng #' . $orderId . ' | SPORTIX';
-        $view  = 'order-detail-customer';
+        $view  = 'client/order-detail-customer';
 
         require_once PATH_VIEW_MAIN;
     }
