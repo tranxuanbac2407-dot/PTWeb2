@@ -10,6 +10,8 @@ match ($action) {
     'register' => (new AuthController)->register(),
     'login'    => (new AuthController)->login(),
     'logout'   => (new AuthController)->logout(),
+    'cart'     => (new CartController)->index(),
+    'checkout' => (new CartController)->checkout(),
 
     // Khu vực quản trị (mỗi route đều được AdminController kiểm tra quyền)
     'admin'                 => (new AdminController)->dashboard(),
