@@ -201,15 +201,48 @@ $payMethodLabels = [
                         <?php endif; ?>
                     </div>
 
-                    <?php if (!empty($order['return_reason'])): ?>
+                    <?php if (!empty($order['return_reason']) || !empty($order['return_image'])): ?>
                         <div class="admin-return-box mt-3 p-3 rounded-3 border border-warning bg-warning bg-opacity-10">
-                            <div class="d-flex align-items-center gap-2 fw-bold text-warning-emphasis mb-2">
-                                <i class="bi bi-arrow-counterclockwise fs-5"></i>
-                                <span>Lý do khách hàng yêu cầu hoàn hàng:</span>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2 fw-bold text-warning-emphasis">
+                                    <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                                    <span>Thông tin yêu cầu hoàn hàng từ khách:</span>
+                                </div>
+                                <?php if (!empty($order['return_image'])): ?>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                                        <i class="bi bi-patch-check-fill me-1"></i>Đã có ảnh tem mác
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary-subtle text-secondary border small">Chưa có ảnh</span>
+                                <?php endif; ?>
                             </div>
-                            <div class="p-2 bg-white rounded border border-warning-subtle text-dark small">
-                                <?= nl2br(htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8')) ?>
+
+                            <div class="mb-2">
+                                <span class="small text-muted d-block mb-1">Lý do hoàn hàng:</span>
+                                <div class="p-2 bg-white rounded border border-warning-subtle text-dark small">
+                                    <?= nl2br(htmlspecialchars($order['return_reason'] ?? 'Không ghi rõ lý do', ENT_QUOTES, 'UTF-8')) ?>
+                                </div>
                             </div>
+
+                            <?php if (!empty($order['return_image'])): ?>
+                                <div class="mt-3">
+                                    <span class="small text-muted d-block mb-1 fw-semibold">
+                                        <i class="bi bi-camera-fill text-danger me-1"></i> Ảnh xác nhận hàng còn nguyên vẹn, còn tem mác:
+                                    </span>
+                                    <div class="d-flex align-items-start gap-3 p-2 bg-white rounded border border-warning-subtle flex-wrap">
+                                        <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded overflow-hidden flex-shrink-0 shadow-xs" title="Bấm vào để mở ảnh kích thước đầy đủ trong tab mới">
+                                            <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>"
+                                                 alt="Ảnh tem mác hoàn hàng #<?= $orderId ?>"
+                                                 style="max-width: 140px; max-height: 140px; object-fit: contain; display: block;">
+                                        </a>
+                                        <div class="small text-muted flex-grow-1" style="min-width: 200px;">
+                                            <div class="fw-semibold text-dark mb-1">Kiểm tra tem mác sản phẩm:</div>
+                                            <p class="mb-1">Khách hàng đã cung cấp ảnh chụp chứng minh sản phẩm còn nguyên vẹn và còn tem mác đính kèm.</p>
+                                            <p class="mb-0 text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Hợp lệ để xác nhận hoàn tiền và điều phối nhân viên đến lấy lại hàng tận nơi.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>

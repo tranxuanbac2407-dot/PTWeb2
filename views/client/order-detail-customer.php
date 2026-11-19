@@ -103,20 +103,43 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                     </div>
                 </div>
             <?php elseif ($status === 'return_request'): ?>
-                <div class="alert alert-warning d-flex align-items-center mb-0 p-3 rounded-3">
-                    <i class="bi bi-arrow-counterclockwise fs-2 me-3 text-warning"></i>
-                    <div>
-                        <h6 class="fw-bold mb-1">Đơn hàng đang chờ xử lý yêu cầu hoàn hàng</h6>
-                        <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
-                        <small class="text-muted">SPORTIX đã tiếp nhận yêu cầu và nhân viên chăm sóc khách hàng sẽ liên hệ với bạn trong vòng 24 giờ làm việc.</small>
+                <div class="alert alert-warning mb-0 p-3 rounded-3 shadow-sm border border-warning-subtle">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-arrow-counterclockwise fs-2 me-3 text-warning flex-shrink-0"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-1 text-dark">Đơn hàng đang chờ xử lý yêu cầu hoàn hàng</h6>
+                            <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                            <small class="text-muted d-block">SPORTIX đã tiếp nhận yêu cầu và ảnh xác nhận hàng còn nguyên vẹn, còn tem mác. Nhân viên CSKH sẽ liên hệ xác nhận hoàn tiền và điều phối đến lấy lại hàng trong vòng 24 giờ làm việc.</small>
+
+                            <?php if (!empty($order['return_image'])): ?>
+                                <div class="mt-3 pt-2 border-top border-warning-subtle d-flex align-items-center gap-3">
+                                    <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-warning me-1"></i>Ảnh hàng còn nguyên tem mác:</span>
+                                    <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
+                                        <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác khi hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             <?php elseif ($status === 'returned'): ?>
-                <div class="alert alert-secondary d-flex align-items-center mb-0 p-3 rounded-3">
-                    <i class="bi bi-arrow-return-left fs-2 me-3 text-secondary"></i>
-                    <div>
-                        <h6 class="fw-bold mb-1">Đơn hàng đã hoàn hàng thành công</h6>
-                        <p class="mb-0 small">Ghi chú: <?= htmlspecialchars($order['return_reason'] ?? 'Đã tiếp nhận hàng và hoàn tất xử lý.', ENT_QUOTES, 'UTF-8') ?></p>
+                <div class="alert alert-secondary mb-0 p-3 rounded-3 shadow-sm border border-secondary-subtle">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-arrow-return-left fs-2 me-3 text-secondary flex-shrink-0"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-1 text-dark">Đơn hàng đã hoàn hàng thành công</h6>
+                            <p class="mb-1 small">Ghi chú: <?= htmlspecialchars($order['return_reason'] ?? 'Đã tiếp nhận hàng và hoàn tất xử lý.', ENT_QUOTES, 'UTF-8') ?></p>
+                            <small class="text-muted d-block">SPORTIX đã kiểm tra tem mác, hoàn tất lấy lại hàng và chuyển trả tiền hoàn cho quý khách.</small>
+
+                            <?php if (!empty($order['return_image'])): ?>
+                                <div class="mt-3 pt-2 border-top border-secondary-subtle d-flex align-items-center gap-3">
+                                    <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-secondary me-1"></i>Ảnh hàng hoàn trả:</span>
+                                    <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
+                                        <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             <?php else: ?>
@@ -167,7 +190,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                     <div class="alert alert-light border rounded-3 p-3 mt-4 mb-0 d-flex justify-content-between align-items-center flex-wrap gap-2" id="return-box">
                         <div>
                             <h6 class="fw-bold mb-1 text-dark"><i class="bi bi-shield-check text-success me-2"></i>Chính sách hoàn trả SPORTIX</h6>
-                            <div class="small text-muted">Sản phẩm bị lỗi hoặc không vừa size? Quý khách có thể yêu cầu hoàn hàng/đổi trả trong vòng 7 ngày kể từ khi nhận hàng.</div>
+                            <div class="small text-muted">Sản phẩm bị lỗi hoặc không vừa size? Quý khách có thể yêu cầu hoàn hàng trong vòng 7 ngày kể từ khi nhận hàng. <strong>Yêu cầu sản phẩm còn nguyên vẹn, còn nguyên tem mác kèm hình ảnh chụp thực tế</strong> để shop xác nhận hoàn tiền và đến lấy lại hàng tận nơi.</div>
                         </div>
                         <button type="button" class="btn btn-outline-danger btn-sm fw-semibold" onclick="toggleReturnModal(true)">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Yêu cầu hoàn hàng
@@ -475,13 +498,13 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                 </h5>
                 <button type="button" class="btn-close" aria-label="Đóng" onclick="toggleReturnModal(false)"></button>
             </div>
-            <form action="<?= BASE_URL ?>?action=order-return" method="post" id="form-return-order">
+            <form action="<?= BASE_URL ?>?action=order-return" method="post" enctype="multipart/form-data" id="form-return-order">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
                 <input type="hidden" name="order_id" value="<?= $ordId ?>">
 
                 <div class="sx-modal-body p-3">
                     <div class="alert alert-warning py-2 px-3 small mb-3">
-                        <i class="bi bi-info-circle-fill me-1"></i> Quý khách vui lòng cung cấp lý do để SPORTIX hỗ trợ thu hồi sản phẩm và hoàn tiền hoặc đổi mới kịp thời.
+                        <i class="bi bi-info-circle-fill me-1"></i> Quý khách vui lòng cung cấp lý do kèm ảnh chụp sản phẩm còn nguyên tem mác để SPORTIX kiểm tra, xác nhận hoàn tiền và điều phối nhân viên đến lấy lại hàng tận nơi.
                     </div>
 
                     <div class="mb-3">
@@ -507,8 +530,36 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                   required></textarea>
                     </div>
 
+                    <!-- Bổ sung trường tải ảnh chụp hàng còn nguyên tem mác -->
+                    <div class="mb-3">
+                        <label for="return_image" class="form-label fw-semibold d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-camera-fill text-danger me-1"></i> Ảnh hàng còn nguyên vẹn, còn tem mác <span class="text-danger">*</span></span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal small" style="font-size: 0.75rem;">Bắt buộc</span>
+                        </label>
+                        <input type="file"
+                               class="form-control"
+                               id="return_image"
+                               name="return_image"
+                               accept="image/*"
+                               required
+                               onchange="previewReturnImage(this)">
+                        <div class="form-text small text-muted mt-1">
+                            <i class="bi bi-info-circle me-1"></i> Chụp rõ góc sản phẩm cùng tem/mác còn nguyên để shop đối chiếu (JPG, PNG, WEBP, tối đa 5MB).
+                        </div>
+
+                        <!-- Vùng xem trước ảnh đã chọn -->
+                        <div id="return-image-preview-container" class="mt-2" style="display: none;">
+                            <div class="position-relative d-inline-block border rounded p-1 bg-white shadow-xs">
+                                <img id="return-image-preview" src="" alt="Xem trước ảnh tem mác" style="max-height: 120px; max-width: 100%; border-radius: 4px; object-fit: contain;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 p-0 rounded-circle d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;" onclick="clearReturnImagePreview()" title="Xóa ảnh">
+                                    <i class="bi bi-x" style="font-size: 14px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="small text-muted">
-                        <i class="bi bi-clock-history me-1"></i> Sau khi gửi yêu cầu, nhân viên CSKH SPORTIX sẽ liên hệ xác nhận trong vòng 24 giờ.
+                        <i class="bi bi-clock-history me-1"></i> Sau khi gửi yêu cầu, nhân viên CSKH SPORTIX sẽ kiểm tra ảnh tem mác và liên hệ xác nhận hoàn tiền trong vòng 24 giờ.
                     </div>
                 </div>
 
@@ -572,6 +623,33 @@ function toggleReturnModal(show) {
             document.body.style.overflow = '';
         }
     }
+}
+
+function previewReturnImage(input) {
+    const container = document.getElementById('return-image-preview-container');
+    const preview = document.getElementById('return-image-preview');
+    if (!container || !preview) return;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            container.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        container.style.display = 'none';
+        preview.src = '';
+    }
+}
+
+function clearReturnImagePreview() {
+    const input = document.getElementById('return_image');
+    const container = document.getElementById('return-image-preview-container');
+    const preview = document.getElementById('return-image-preview');
+    if (input) input.value = '';
+    if (container) container.style.display = 'none';
+    if (preview) preview.src = '';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
