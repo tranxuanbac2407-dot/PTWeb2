@@ -13,7 +13,10 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 // Helper hiển thị badge trạng thái
 function render_order_status_badge($status, $payMethod = 'cod', $payStatus = 'unpaid') {
-    if ($status === 'shipping' && $payMethod !== 'cod' && $payStatus === 'paid') {
+    $isOnline = ($payMethod !== 'cod');
+    $isPaid   = ($payStatus === 'paid') || ($isOnline && in_array($status, ['shipping', 'completed'], true));
+
+    if ($status === 'shipping' && $isOnline && $isPaid) {
         return '<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill"><i class="bi bi-truck me-1"></i> Đã TT thành công &amp; Đang giao hàng</span>';
     }
 
@@ -172,7 +175,11 @@ function get_payment_name($method) {
                                         <div>
                                             <strong class="text-dark">Thanh toán:</strong> <?= get_payment_name($order['payment_method'] ?? 'cod') ?>
                                             <?php if (($order['payment_method'] ?? 'cod') !== 'cod'): ?>
-                                                <?php if (($order['payment_status'] ?? '') === 'paid'): ?>
+                                                <?php
+                                                    $itemSt = $order['order_status'] ?? 'pending';
+                                                    $itemPaid = (($order['payment_status'] ?? '') === 'paid') || in_array($itemSt, ['shipping', 'completed'], true);
+                                                ?>
+                                                <?php if ($itemPaid): ?>
                                                     <span class="badge bg-success text-white ms-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
                                                 <?php else: ?>
                                                     <span class="badge bg-warning text-dark ms-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>

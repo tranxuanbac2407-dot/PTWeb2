@@ -44,7 +44,9 @@ $flashError   = $_SESSION['flash_error'] ?? null;
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 $paymentMethod = $order['payment_method'] ?? 'cod';
-$paymentStatus = $order['payment_status'] ?? 'unpaid';
+$isOnlineOrder = ($paymentMethod !== 'cod');
+$isOrderPaid   = (($order['payment_status'] ?? 'unpaid') === 'paid') || ($isOnlineOrder && in_array($status, ['shipping', 'completed'], true));
+$paymentStatus = $isOrderPaid ? 'paid' : (string) ($order['payment_status'] ?? 'unpaid');
 $qrUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
 ?>
 

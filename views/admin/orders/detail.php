@@ -30,7 +30,7 @@ $statusLabels = [
 $currStatusInfo = $statusLabels[$currStatus] ?? ['text' => $currStatus, 'icon' => 'bi-question-circle', 'class' => 'admin-order-pending'];
 
 $isOnlinePayment = ($payMethod !== 'cod');
-$isPaid = (($order['payment_status'] ?? 'unpaid') === 'paid');
+$isPaid = (($order['payment_status'] ?? 'unpaid') === 'paid') || ($isOnlinePayment && in_array($currStatus, ['shipping', 'completed'], true));
 
 $payMethodLabels = [
     'cod'     => 'Thanh toán khi nhận hàng (COD)',
