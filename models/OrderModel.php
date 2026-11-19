@@ -31,6 +31,10 @@ class OrderModel extends BaseModel
         } catch (Throwable $e) {}
 
         try {
+            $this->pdo->exec("ALTER TABLE {$this->table} ADD COLUMN `return_image` VARCHAR(255) NULL AFTER `return_reason`");
+        } catch (Throwable $e) {}
+
+        try {
             // Tự động đồng bộ: mọi đơn hàng online mà admin đã chuyển sang shipping hoặc completed đều là paid
             $this->pdo->exec("UPDATE {$this->table} SET payment_status = 'paid' WHERE payment_method != 'cod' AND order_status IN ('shipping', 'completed') AND (payment_status IS NULL OR payment_status != 'paid')");
         } catch (Throwable $e) {}

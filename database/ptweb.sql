@@ -76,7 +76,8 @@ CREATE TABLE `orders` (
   `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `payment_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'unpaid',
   `order_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
-  `return_reason` text COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `return_reason` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `return_image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
