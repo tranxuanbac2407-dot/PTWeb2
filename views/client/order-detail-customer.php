@@ -220,9 +220,9 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
         </div>
 
         <div class="row g-4">
-            <!-- Cột trái: Danh sách các sản phẩm trong đơn -->
+            <!-- Cột trái: Danh sách các sản phẩm trong đơn & Mã VietQR thanh toán -->
             <div class="col-12 col-lg-8">
-                <div class="sx-card p-3">
+                <div class="sx-card p-3 mb-4 shadow-sm">
                     <h2 class="fs-5 fw-bold mb-3 pb-2 border-bottom">Danh sách sản phẩm (<?= count($items) ?> món)</h2>
 
                     <div class="table-responsive">
@@ -290,104 +290,112 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         </table>
                     </div>
                 </div>
-            </div>
-
-            <!-- Cột phải: Thông tin nhận hàng & Thanh toán -->
-            <div class="col-12 col-lg-4">
-                <div class="sx-card p-4 mb-4">
-                    <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom">Địa chỉ nhận hàng</h3>
-                    <div class="mb-2">
-                        <strong class="text-dark d-block"><?= htmlspecialchars($order['receiver_name'] ?? 'Khách hàng', ENT_QUOTES, 'UTF-8') ?></strong>
-                        <span class="text-muted"><i class="bi bi-telephone me-1"></i><?= htmlspecialchars($order['phone'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                    <div class="text-muted small">
-                        <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($order['shipping_address'] ?? '', ENT_QUOTES, 'UTF-8') ?>
-                    </div>
-                </div>
 
                 <?php if (($order['payment_method'] ?? '') === 'banking' || ($order['payment_method'] ?? '') === 'momo'): ?>
                     <?php
                         $paymentStatus = $isPaidStatus ? 'paid' : (string) ($order['payment_status'] ?? 'unpaid');
                         $qrDetailUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
                     ?>
-                    <div class="sx-card p-4 mb-4 border border-primary border-opacity-25" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
-                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
-                            <h4 class="fs-6 fw-bold text-primary mb-0 d-flex align-items-center">
-                                <i class="bi bi-qr-code-scan me-2 fs-5"></i>Mã VietQR thanh toán
+                    <!-- Khối mã VietQR thanh toán được bố trí sang cột trái rộng rãi -->
+                    <div class="sx-card p-4 border border-primary border-opacity-25 shadow-sm" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom flex-wrap gap-2">
+                            <h4 class="fs-5 fw-bold text-primary mb-0 d-flex align-items-center">
+                                <i class="bi bi-qr-code-scan me-2 fs-4"></i>Mã VietQR thanh toán tự động
                             </h4>
                             <?php if ($isPaidStatus): ?>
-                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                                <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                                <span class="badge bg-warning text-dark px-3 py-2 fs-6"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
                             <?php endif; ?>
                         </div>
 
-                        <div class="text-center mb-3">
-                            <div class="d-inline-block p-2 bg-white rounded-3 shadow-sm border">
-                                <img src="<?= htmlspecialchars($qrDetailUrl, ENT_QUOTES, 'UTF-8') ?>"
-                                     alt="VietQR #<?= $ordId ?>"
-                                     class="img-fluid rounded"
-                                     style="max-width: 200px; height: auto;"
-                                     loading="lazy">
+                        <div class="row g-4 align-items-center">
+                            <!-- Cột trái trong card: Ảnh mã VietQR -->
+                            <div class="col-12 col-md-5 text-center">
+                                <div class="d-inline-block p-2 bg-white rounded-3 shadow-sm border">
+                                    <img src="<?= htmlspecialchars($qrDetailUrl, ENT_QUOTES, 'UTF-8') ?>"
+                                         alt="VietQR #<?= $ordId ?>"
+                                         class="img-fluid rounded"
+                                         style="max-width: 220px; height: auto;"
+                                         loading="lazy">
+                                </div>
+                                <div class="small text-muted mt-2">
+                                    <i class="bi bi-phone me-1"></i>Mở App Ngân hàng bất kỳ quét mã để thanh toán
+                                </div>
                             </div>
-                            <div class="small text-muted mt-2">
-                                Quét mã bằng App Ngân hàng để chuyển tiền tự động
+
+                            <!-- Cột phải trong card: Chi tiết số tài khoản, số tiền và nội dung -->
+                            <div class="col-12 col-md-7">
+                                <div class="bg-white p-3 rounded-3 border small d-flex flex-column gap-2 mb-3 shadow-xs">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Ngân hàng thụ hưởng:</span>
+                                        <strong class="text-dark"><?= defined('BANK_NAME') ? BANK_NAME : 'MBBank' ?></strong>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Chủ tài khoản:</span>
+                                        <strong class="text-dark"><?= defined('BANK_ACCOUNT_NAME') ? BANK_ACCOUNT_NAME : 'SPORTIX STORE' ?></strong>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Số tài khoản:</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="text-dark fs-6" id="copy-bank-acc"><?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?></strong>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sx-copy-btn" onclick="copyToClipboard('<?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?>', this)" title="Sao chép số tài khoản">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Số tiền chuyển khoản:</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="text-accent fs-6"><?= number_format($total, 0, ',', '.') ?> đ</strong>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sx-copy-btn" onclick="copyToClipboard('<?= (int) round($total) ?>', this)" title="Sao chép số tiền">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">Nội dung chuyển khoản:</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="text-primary fs-6" id="copy-memo">SPORTIX DH<?= $ordId ?></strong>
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 sx-copy-btn" onclick="copyToClipboard('SPORTIX DH<?= $ordId ?>', this)" title="Sao chép nội dung">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <?php if (!$isPaidStatus && $status !== 'cancelled'): ?>
+                                    <form action="<?= BASE_URL ?>?action=confirm-payment" method="post" class="m-0">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                        <input type="hidden" name="order_id" value="<?= $ordId ?>">
+                                        <input type="hidden" name="return_to" value="detail">
+                                        <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-check2-circle me-2 fs-5"></i>
+                                            <span>Tôi đã hoàn tất chuyển khoản</span>
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold border border-success-subtle shadow-xs">
+                                        <i class="bi bi-patch-check-fill me-1 text-success"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng đang được giao đến bạn.
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
-
-                        <div class="bg-white p-2 rounded border small d-flex flex-column gap-2 mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Ngân hàng:</span>
-                                <strong><?= defined('BANK_NAME') ? BANK_NAME : 'MBBank' ?></strong>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Số tài khoản:</span>
-                                <div class="d-flex align-items-center gap-1">
-                                    <strong><?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?></strong>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="copyToClipboard('<?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?>', this)" title="Sao chép">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Số tiền:</span>
-                                <div class="d-flex align-items-center gap-1">
-                                    <strong class="text-accent"><?= number_format($total, 0, ',', '.') ?> đ</strong>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="copyToClipboard('<?= (int) round($total) ?>', this)" title="Sao chép">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted">Nội dung CK:</span>
-                                <div class="d-flex align-items-center gap-1">
-                                    <strong class="text-primary">SPORTIX DH<?= $ordId ?></strong>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1" onclick="copyToClipboard('SPORTIX DH<?= $ordId ?>', this)" title="Sao chép">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <?php if (!$isPaidStatus && $status !== 'cancelled'): ?>
-                            <form action="<?= BASE_URL ?>?action=confirm-payment" method="post">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
-                                <input type="hidden" name="order_id" value="<?= $ordId ?>">
-                                <input type="hidden" name="return_to" value="detail">
-                                <button type="submit" class="btn btn-success btn-sm w-100 fw-bold py-2">
-                                    <i class="bi bi-check2-circle me-1"></i> Tôi đã hoàn tất chuyển khoản
-                                </button>
-                            </form>
-                        <?php else: ?>
-                            <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold">
-                                <i class="bi bi-patch-check-fill me-1"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng đang được giao đến bạn.
-                            </div>
-                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
+            </div>
 
-                <div class="sx-card p-4">
-                    <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom">Thanh toán</h3>
+            <!-- Cột phải: Thông tin thanh toán & Địa chỉ nhận hàng -->
+            <div class="col-12 col-lg-4">
+                <!-- Khối thanh toán được đẩy lên trên cùng của cột phải -->
+                <div class="sx-card p-4 mb-4 shadow-sm">
+                    <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom d-flex align-items-center">
+                        <i class="bi bi-credit-card-2-front text-accent me-2"></i>Thông tin thanh toán
+                    </h3>
 
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Phương thức:</span>
@@ -432,9 +440,23 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         </span>
                     </div>
 
-                    <a href="<?= BASE_URL ?>?action=products" class="btn btn-primary w-100 py-2 fw-semibold">
+                    <a href="<?= BASE_URL ?>?action=products" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
                         <i class="bi bi-bag-plus me-1"></i> Tiếp tục mua sắm
                     </a>
+                </div>
+
+                <!-- Khối địa chỉ nhận hàng đặt phía dưới khối thanh toán -->
+                <div class="sx-card p-4 shadow-sm">
+                    <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom d-flex align-items-center">
+                        <i class="bi bi-geo-alt-fill text-accent me-2"></i>Địa chỉ nhận hàng
+                    </h3>
+                    <div class="mb-2">
+                        <strong class="text-dark d-block"><?= htmlspecialchars($order['receiver_name'] ?? 'Khách hàng', ENT_QUOTES, 'UTF-8') ?></strong>
+                        <span class="text-muted"><i class="bi bi-telephone me-1"></i><?= htmlspecialchars($order['phone'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($order['shipping_address'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                    </div>
                 </div>
             </div>
         </div>
