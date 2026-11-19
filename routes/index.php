@@ -19,6 +19,7 @@ match ($action) {
     'order-success'  => (new HomeController)->orderSuccess(),
     'order-history'  => (new HomeController)->orderHistory(),
     'order-detail'   => (new HomeController)->orderDetailCustomer(),
+    'order-return'   => (new HomeController)->requestReturn(),
     'register'       => (new AuthController)->register(),
     'login'    => (new AuthController)->login(),
     'logout'   => (new AuthController)->logout(),

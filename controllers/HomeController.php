@@ -513,11 +513,64 @@ class HomeController extends BaseController
         }
 
         $items = $orderModel->getOrderItems($orderId);
+        $csrfToken = $this->csrfToken();
 
         $title = 'Chi tiết đơn hàng #' . $orderId . ' | SPORTIX';
         $view  = 'client/order-detail-customer';
 
         require_once PATH_VIEW_MAIN;
+    }
+
+    /**
+     * Khách hàng gửi yêu cầu hoàn hàng.
+     */
+    public function requestReturn()
+    {
+        $authenticatedUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để thực hiện chức năng này.');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        if (!$this->csrfValid()) {
+            $_SESSION['flash_error'] = 'Phiên làm việc đã hết hạn. Vui lòng gửi lại yêu cầu.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderId = (int) ($_POST['order_id'] ?? 0);
+        $presetReason = trim($_POST['preset_reason'] ?? '');
+        $detailReason = trim($_POST['detail_reason'] ?? '');
+
+        if ($orderId <= 0) {
+            $_SESSION['flash_error'] = 'Mã đơn hàng không hợp lệ.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $fullReason = $presetReason;
+        if ($detailReason !== '') {
+            $fullReason .= ($fullReason !== '' ? ' - ' : '') . $detailReason;
+        }
+
+        if (trim($fullReason) === '') {
+            $_SESSION['flash_error'] = 'Vui lòng chọn hoặc điền lý do hoàn hàng.';
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+            exit;
+        }
+
+        $orderModel = new OrderModel();
+        $success = $orderModel->requestReturn($orderId, (int) $authenticatedUser['id'], $fullReason);
+
+        if ($success) {
+            $_SESSION['flash_success'] = 'Đã gửi yêu cầu hoàn hàng cho đơn #' . $orderId . '! Bộ phận CSKH SPORTIX sẽ liên hệ hỗ trợ bạn sớm nhất.';
+        } else {
+            $_SESSION['flash_error'] = 'Không thể gửi yêu cầu hoàn hàng. Đơn hàng không ở trạng thái giao thành công hoặc đã được yêu cầu trước đó.';
+        }
+
+        header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+        exit;
     }
 
     public function notFound()
