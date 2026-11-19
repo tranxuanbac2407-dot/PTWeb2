@@ -250,7 +250,15 @@ class OrderModel extends BaseModel
      */
     public function updateStatus($orderId, $status)
     {
-        $allowedStatuses = ['pending', 'processing', 'shipping', 'completed', 'cancelled'];
+        $allowedStatuses = [
+            'pending',
+            'processing',
+            'shipping',
+            'completed',
+            'cancelled',
+            'return_request',
+            'returned',
+        ];
         if (!in_array($status, $allowedStatuses, true)) {
             return false;
         }
@@ -260,6 +268,92 @@ class OrderModel extends BaseModel
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':status', $status);
             $statement->bindValue(':id', (int) $orderId, PDO::PARAM_INT);
+
+            return $statement->execute();
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Khách hàng gửi yêu cầu hoàn hàng cho một đơn hàng đã giao thành công.
+     *
+     * @param int $orderId ID đơn hàng
+     * @param int $userId  ID người dùng sở hữu đơn
+     * @param string $reason Lý do hoàn hàng
+     * @return bool
+     */
+    public function requestReturn($orderId, $userId, $reason)
+    {
+        $orderId = (int) $orderId;
+        $userId  = (int) $userId;
+        $reason  = trim((string) $reason);
+
+        if ($orderId <= 0 || $userId <= 0 || $reason === '') {
+            return false;
+        }
+
+        // Kiểm tra đơn hàng thuộc sở hữu của người dùng và có trạng thái là completed
+        $order = $this->getById($orderId, $userId);
+        if (!$order) {
+            return false;
+        }
+
+        $currentStatus = $order['order_status'] ?? '';
+        if ($currentStatus !== 'completed') {
+            return false;
+        }
+
+        try {
+            // Thử cập nhật cả trạng thái và lý do hoàn hàng
+            $sql = 'UPDATE ' . $this->table . ' 
+                    SET order_status = :status, return_reason = :reason 
+                    WHERE order_id = :id AND user_id = :user_id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':status', 'return_request');
+            $statement->bindValue(':reason', $reason);
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
+
+            return $statement->execute();
+        } catch (Throwable $e) {
+            // Fallback nếu cột return_reason chưa được thêm vào database
+            try {
+                $sqlFallback = 'UPDATE ' . $this->table . ' 
+                                SET order_status = :status 
+                                WHERE order_id = :id AND user_id = :user_id';
+                $statement = $this->pdo->prepare($sqlFallback);
+                $statement->bindValue(':status', 'return_request');
+                $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+                $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
+
+                return $statement->execute();
+            } catch (Throwable $e2) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Cập nhật trạng thái thanh toán của đơn hàng (unpaid, paid, refunded).
+     *
+     * @param int $orderId
+     * @param string $paymentStatus
+     * @return bool
+     */
+    public function updatePaymentStatus($orderId, $paymentStatus)
+    {
+        $orderId = (int) $orderId;
+        $allowed = ['unpaid', 'paid', 'refunded'];
+        if ($orderId <= 0 || !in_array($paymentStatus, $allowed, true)) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . ' SET payment_status = :p_status WHERE order_id = :id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':p_status', $paymentStatus);
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
 
             return $statement->execute();
         } catch (Throwable $e) {
@@ -361,8 +455,40 @@ class OrderModel extends BaseModel
                 'shipping_address' => 'Số 12 Quang Trung, Hồng Bàng, Hải Phòng',
                 'total_amount'     => 799000,
                 'payment_method'   => 'cod',
+                'payment_status'   => 'unpaid',
                 'order_status'     => 'cancelled',
+                'return_reason'    => null,
                 'order_date'       => '2026-11-14 11:10:00',
+            ],
+            [
+                'order_id'         => 6,
+                'user_id'          => 1,
+                'username'         => 'nguyenan',
+                'customer_name'    => 'Nguyễn Văn An',
+                'receiver_name'    => 'Nguyễn Văn An',
+                'phone'            => '0987654321',
+                'shipping_address' => 'Số 13 Trịnh Văn Bô, Nam Từ Liêm, Hà Nội',
+                'total_amount'     => 640000,
+                'payment_method'   => 'banking',
+                'payment_status'   => 'paid',
+                'order_status'     => 'return_request',
+                'return_reason'    => 'Sản phẩm bị lỗi bung chỉ đường may ở tay áo, cần hoàn hàng để đổi mẫu khác.',
+                'order_date'       => '2026-11-16 10:20:00',
+            ],
+            [
+                'order_id'         => 7,
+                'user_id'          => 2,
+                'username'         => 'tranmai',
+                'customer_name'    => 'Trần Thị Mai',
+                'receiver_name'    => 'Trần Thị Mai',
+                'phone'            => '0912345678',
+                'shipping_address' => 'Tòa Keangnam, Mễ Trì, Cầu Giấy, Hà Nội',
+                'total_amount'     => 850000,
+                'payment_method'   => 'banking',
+                'payment_status'   => 'refunded',
+                'order_status'     => 'returned',
+                'return_reason'    => 'Khách mang không vừa chân, shop đã thu hồi hàng và hoàn tiền thành công.',
+                'order_date'       => '2026-11-13 14:00:00',
             ],
         ];
 
