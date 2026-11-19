@@ -4,6 +4,64 @@ class OrderModel extends BaseModel
 {
     protected $table = 'orders';
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensureSchemaUpdated();
+    }
+
+    /**
+     * Tự động bổ sung các cột payment_status và return_reason nếu CSDL chưa có,
+     * đồng thời tự động đồng bộ trạng thái thanh toán cho các đơn hàng online đang giao hoặc hoàn thành.
+     */
+    private function ensureSchemaUpdated()
+    {
+        static $checked = false;
+        if ($checked || !$this->pdo) {
+            return;
+        }
+        $checked = true;
+
+        try {
+            $this->pdo->exec("ALTER TABLE {$this->table} ADD COLUMN `payment_status` VARCHAR(50) DEFAULT 'unpaid' AFTER `payment_method`");
+        } catch (Throwable $e) {}
+
+        try {
+            $this->pdo->exec("ALTER TABLE {$this->table} ADD COLUMN `return_reason` TEXT NULL AFTER `order_status`");
+        } catch (Throwable $e) {}
+
+        try {
+            // Tự động đồng bộ: mọi đơn hàng online mà admin đã chuyển sang shipping hoặc completed đều là paid
+            $this->pdo->exec("UPDATE {$this->table} SET payment_status = 'paid' WHERE payment_method != 'cod' AND order_status IN ('shipping', 'completed') AND (payment_status IS NULL OR payment_status != 'paid')");
+        } catch (Throwable $e) {}
+    }
+
+    /**
+     * Chuẩn hóa dữ liệu đơn hàng:
+     * Nếu là đơn hàng online và trạng thái là 'shipping' hoặc 'completed',
+     * chắc chắn đã được thanh toán thành công -> payment_status = 'paid'.
+     */
+    public function normalizeOrder(?array $order)
+    {
+        if (!$order) {
+            return null;
+        }
+
+        $status    = $order['order_status'] ?? 'pending';
+        $payMethod = $order['payment_method'] ?? 'cod';
+        $payStatus = $order['payment_status'] ?? '';
+
+        if ($payMethod !== 'cod' && in_array($status, ['shipping', 'completed'], true)) {
+            $order['payment_status'] = 'paid';
+        } elseif ($payMethod === 'cod' && $status === 'completed') {
+            $order['payment_status'] = 'paid';
+        } elseif (empty($payStatus)) {
+            $order['payment_status'] = 'unpaid';
+        }
+
+        return $order;
+    }
+
     /**
      * Lấy toàn bộ đơn hàng cho khu vực Quản trị (hỗ trợ tìm kiếm và lọc trạng thái).
      *
@@ -38,8 +96,9 @@ class OrderModel extends BaseModel
                 $statement->bindValue($k, $v);
             }
             $statement->execute();
+            $rows = $statement->fetchAll();
 
-            return $statement->fetchAll();
+            return array_map([$this, 'normalizeOrder'], $rows);
         } catch (Throwable $e) {
             throw new RuntimeException('Không thể tải danh sách đơn hàng từ cơ sở dữ liệu.', 0, $e);
         }
@@ -80,8 +139,9 @@ class OrderModel extends BaseModel
                 $statement->bindValue($key, $value, PDO::PARAM_INT);
             }
             $statement->execute();
+            $row = $statement->fetch();
 
-            return $statement->fetch() ?: null;
+            return $row ? $this->normalizeOrder($row) : null;
         } catch (Throwable $e) {
             return null;
         }
@@ -234,8 +294,9 @@ class OrderModel extends BaseModel
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $statement->execute();
+            $rows = $statement->fetchAll();
 
-            return $statement->fetchAll();
+            return array_map([$this, 'normalizeOrder'], $rows);
         } catch (Throwable $e) {
             return [];
         }
@@ -268,8 +329,19 @@ class OrderModel extends BaseModel
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':status', $status);
             $statement->bindValue(':id', (int) $orderId, PDO::PARAM_INT);
+            $res = $statement->execute();
 
-            return $statement->execute();
+            // Nếu đơn hàng online được chuyển sang đang giao hàng (shipping) hoặc hoàn thành (completed) -> chắc chắn đã thanh toán thành công
+            if ($res && in_array($status, ['shipping', 'completed'], true)) {
+                try {
+                    $order = $this->getById($orderId);
+                    if ($order && (($order['payment_method'] ?? '') !== 'cod' || $status === 'completed')) {
+                        $this->updatePaymentStatus($orderId, 'paid');
+                    }
+                } catch (Throwable $pe) {}
+            }
+
+            return $res;
         } catch (Throwable $e) {
             return false;
         }

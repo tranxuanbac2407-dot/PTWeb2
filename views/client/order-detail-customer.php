@@ -177,7 +177,9 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
                 <?php
                     $isOnlineMethod = (($order['payment_method'] ?? 'cod') !== 'cod');
-                    $isPaidStatus   = (($order['payment_status'] ?? 'unpaid') === 'paid');
+                    // Đơn online coi như đã thanh toán nếu payment_status là paid, HOẶC admin đã chuyển sang shipping/completed
+                    $isPaidStatus   = (($order['payment_status'] ?? 'unpaid') === 'paid')
+                                   || ($isOnlineMethod && in_array($status, ['shipping', 'completed'], true));
                 ?>
 
                 <?php if ($isOnlineMethod && $isPaidStatus && $status === 'shipping'): ?>
@@ -305,7 +307,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
                 <?php if (($order['payment_method'] ?? '') === 'banking' || ($order['payment_method'] ?? '') === 'momo'): ?>
                     <?php
-                        $paymentStatus = $order['payment_status'] ?? 'unpaid';
+                        $paymentStatus = $isPaidStatus ? 'paid' : (string) ($order['payment_status'] ?? 'unpaid');
                         $qrDetailUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
                     ?>
                     <div class="sx-card p-4 mb-4 border border-primary border-opacity-25" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
@@ -313,10 +315,10 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                             <h4 class="fs-6 fw-bold text-primary mb-0 d-flex align-items-center">
                                 <i class="bi bi-qr-code-scan me-2 fs-5"></i>Mã VietQR thanh toán
                             </h4>
-                            <?php if ($paymentStatus === 'paid'): ?>
-                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
+                            <?php if ($isPaidStatus): ?>
+                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Chờ chuyển khoản</span>
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
                             <?php endif; ?>
                         </div>
 
@@ -367,7 +369,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                             </div>
                         </div>
 
-                        <?php if ($paymentStatus !== 'paid' && $status !== 'cancelled'): ?>
+                        <?php if (!$isPaidStatus && $status !== 'cancelled'): ?>
                             <form action="<?= BASE_URL ?>?action=confirm-payment" method="post">
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
                                 <input type="hidden" name="order_id" value="<?= $ordId ?>">
@@ -378,7 +380,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                             </form>
                         <?php else: ?>
                             <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold">
-                                <i class="bi bi-patch-check-fill me-1"></i> Admin đã xác nhận thanh toán thành công!
+                                <i class="bi bi-patch-check-fill me-1"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng đang được giao đến bạn.
                             </div>
                         <?php endif; ?>
                     </div>
