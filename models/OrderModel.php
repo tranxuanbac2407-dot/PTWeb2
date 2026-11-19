@@ -362,6 +362,45 @@ class OrderModel extends BaseModel
     }
 
     /**
+     * Admin xác nhận thanh toán thành công và đồng thời chuyển sang trạng thái đang giao hàng (shipping).
+     * Áp dụng cho các đơn hàng thanh toán Online khi đã nhận được tiền chuyển khoản.
+     *
+     * @param int $orderId
+     * @return bool
+     */
+    public function confirmPaymentAndShip($orderId)
+    {
+        $orderId = (int) $orderId;
+        if ($orderId <= 0) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . ' 
+                    SET payment_status = :p_status, order_status = :o_status 
+                    WHERE order_id = :id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':p_status', 'paid');
+            $statement->bindValue(':o_status', 'shipping');
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+
+            return $statement->execute();
+        } catch (Throwable $e) {
+            // Fallback nếu cột payment_status chưa được tạo
+            try {
+                $sqlFallback = 'UPDATE ' . $this->table . ' SET order_status = :o_status WHERE order_id = :id';
+                $statement = $this->pdo->prepare($sqlFallback);
+                $statement->bindValue(':o_status', 'shipping');
+                $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+
+                return $statement->execute();
+            } catch (Throwable $e2) {
+                return false;
+            }
+        }
+    }
+
+    /**
      * Đếm tổng số đơn hàng trong hệ thống (phục vụ thống kê Dashboard).
      *
      * @return int

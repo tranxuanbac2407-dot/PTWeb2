@@ -40,6 +40,7 @@ match ($action) {
     'admin-orders'              => (new AdminController)->orders(),
     'admin-order-detail'        => (new AdminController)->orderDetail(),
     'admin-order-update-status' => (new AdminController)->orderUpdateStatus(),
+    'admin-order-confirm-payment' => (new AdminController)->orderConfirmPayment(),
 
     default    => (new HomeController)->notFound(),
 };

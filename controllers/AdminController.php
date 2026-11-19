@@ -853,12 +853,74 @@ class AdminController extends BaseController
         }
 
         $orderModel = new OrderModel();
+        $order = $orderModel->getById($id);
+        if (!$order) {
+            $this->setFlash('error', 'Không tìm thấy đơn hàng #' . $id);
+            $this->redirect('?action=admin-orders');
+        }
+
+        $payMethod = (string) ($order['payment_method'] ?? 'cod');
+        $payStatus = (string) ($order['payment_status'] ?? 'unpaid');
+
+        // Quy tắc nghiệp vụ quan trọng:
+        // Đơn hàng thanh toán Online (banking, momo,...): chỉ có thanh toán thành công thì mới được giao hàng.
+        // Thanh toán khi nhận hàng (COD) là chuyện khác: COD thanh toán tiền mặt lúc nhận nên được giao bình thường.
+        if ($payMethod !== 'cod' && $status === 'shipping' && $payStatus !== 'paid') {
+            $this->setFlash('error', 'Đơn hàng thanh toán Online chưa được thanh toán thành công! Chỉ có thanh toán thành công thì mới được giao hàng. Vui lòng bấm nút "Xác nhận đã thanh toán & Bắt đầu giao hàng" bên dưới khi tiền đã về tài khoản.');
+            $this->redirect('?action=admin-order-detail&id=' . $id);
+        }
+
         $updated = $orderModel->updateStatus($id, $status);
 
         if ($updated) {
+            // Nếu đơn hàng COD được chuyển sang hoàn thành, tiền mặt đã thu xong -> cập nhật trạng thái thanh toán thành paid
+            if ($payMethod === 'cod' && $status === 'completed' && $payStatus !== 'paid') {
+                $orderModel->updatePaymentStatus($id, 'paid');
+            }
+
             $this->setFlash('success', 'Cập nhật trạng thái đơn hàng #' . $id . ' thành công!');
         } else {
             $this->setFlash('error', 'Không thể cập nhật trạng thái đơn hàng.');
+        }
+
+        $this->redirect('?action=admin-order-detail&id=' . $id);
+    }
+
+    /**
+     * Admin xác nhận đã thanh toán thành công cho đơn hàng Online và chuyển sang trạng thái đang giao hàng.
+     */
+    public function orderConfirmPayment()
+    {
+        $this->requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('?action=admin-orders');
+        }
+
+        if (!$this->csrfValid()) {
+            $this->setFlash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+            $this->redirect('?action=admin-orders');
+        }
+
+        $id = (int) ($_POST['order_id'] ?? 0);
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã đơn hàng không hợp lệ.');
+            $this->redirect('?action=admin-orders');
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->getById($id);
+        if (!$order) {
+            $this->setFlash('error', 'Không tìm thấy đơn hàng #' . $id);
+            $this->redirect('?action=admin-orders');
+        }
+
+        $success = $orderModel->confirmPaymentAndShip($id);
+
+        if ($success) {
+            $this->setFlash('success', 'Đã xác nhận thanh toán thành công cho đơn hàng #' . $id . ' và chuyển sang trạng thái Đang giao hàng!');
+        } else {
+            $this->setFlash('error', 'Không thể xác nhận thanh toán cho đơn hàng #' . $id . '. Vui lòng thử lại.');
         }
 
         $this->redirect('?action=admin-order-detail&id=' . $id);
