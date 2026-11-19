@@ -224,6 +224,14 @@ $statusLabels = [
                                             <i class="bi bi-chat-left-dots me-1"></i>Lý do: <?= htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8') ?>
                                         </div>
                                     <?php endif; ?>
+
+                                    <?php if (!empty($order['return_image'])): ?>
+                                        <div class="mt-1">
+                                            <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="badge bg-danger-subtle text-danger border border-danger-subtle text-decoration-none py-0 px-1" style="font-size: 0.7rem;" title="Xem ảnh chụp tem mác">
+                                                <i class="bi bi-tag-fill me-1"></i>Có ảnh tem mác
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
 
                                 <!-- Cột 7: Thao tác (Xem chi tiết) -->
