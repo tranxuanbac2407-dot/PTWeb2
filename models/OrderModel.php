@@ -357,13 +357,15 @@ class OrderModel extends BaseModel
      * @param int $orderId ID đơn hàng
      * @param int $userId  ID người dùng sở hữu đơn
      * @param string $reason Lý do hoàn hàng
+     * @param string|null $image Đường dẫn ảnh chụp sản phẩm còn tem mác
      * @return bool
      */
-    public function requestReturn($orderId, $userId, $reason)
+    public function requestReturn($orderId, $userId, $reason, $image = null)
     {
         $orderId = (int) $orderId;
         $userId  = (int) $userId;
         $reason  = trim((string) $reason);
+        $image   = !empty($image) ? trim((string) $image) : null;
 
         if ($orderId <= 0 || $userId <= 0 || $reason === '') {
             return false;
@@ -381,25 +383,27 @@ class OrderModel extends BaseModel
         }
 
         try {
-            // Thử cập nhật cả trạng thái và lý do hoàn hàng
+            // Thử cập nhật trạng thái, lý do và ảnh chụp tem mác
             $sql = 'UPDATE ' . $this->table . ' 
-                    SET order_status = :status, return_reason = :reason 
+                    SET order_status = :status, return_reason = :reason, return_image = :image 
                     WHERE order_id = :id AND user_id = :user_id';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':status', 'return_request');
             $statement->bindValue(':reason', $reason);
+            $statement->bindValue(':image', $image);
             $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
             $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
 
             return $statement->execute();
         } catch (Throwable $e) {
-            // Fallback nếu cột return_reason chưa được thêm vào database
+            // Fallback nếu cột return_image chưa có
             try {
                 $sqlFallback = 'UPDATE ' . $this->table . ' 
-                                SET order_status = :status 
+                                SET order_status = :status, return_reason = :reason 
                                 WHERE order_id = :id AND user_id = :user_id';
                 $statement = $this->pdo->prepare($sqlFallback);
                 $statement->bindValue(':status', 'return_request');
+                $statement->bindValue(':reason', $reason);
                 $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
                 $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
 

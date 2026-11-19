@@ -606,12 +606,39 @@ class HomeController extends BaseController
             exit;
         }
 
+        // Bắt buộc khách hàng phải tải ảnh sản phẩm còn nguyên vẹn, còn tem mác
+        $returnImage = $_FILES['return_image'] ?? null;
+        if (empty($returnImage) || !isset($returnImage['error']) || $returnImage['error'] === UPLOAD_ERR_NO_FILE) {
+            $_SESSION['flash_error'] = 'Vui lòng chụp và tải lên ảnh sản phẩm còn nguyên vẹn, còn nguyên tem mác để SPORTIX xác nhận hoàn tiền và đến lấy lại hàng.';
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+            exit;
+        }
+
+        $imageError = null;
+        if (!is_valid_image_upload($returnImage, $imageError)) {
+            $_SESSION['flash_error'] = $imageError ?: 'Tệp ảnh tải lên không hợp lệ.';
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+            exit;
+        }
+
+        $savedImagePath = null;
+        try {
+            $savedImagePath = upload_file('returns', $returnImage);
+        } catch (Throwable $e) {
+            $_SESSION['flash_error'] = 'Không thể lưu ảnh tải lên: ' . $e->getMessage();
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+            exit;
+        }
+
         $orderModel = new OrderModel();
-        $success = $orderModel->requestReturn($orderId, (int) $authenticatedUser['id'], $fullReason);
+        $success = $orderModel->requestReturn($orderId, (int) $authenticatedUser['id'], $fullReason, $savedImagePath);
 
         if ($success) {
-            $_SESSION['flash_success'] = 'Đã gửi yêu cầu hoàn hàng cho đơn #' . $orderId . '! Bộ phận CSKH SPORTIX sẽ liên hệ hỗ trợ bạn sớm nhất.';
+            $_SESSION['flash_success'] = 'Đã gửi yêu cầu hoàn hàng cho đơn #' . $orderId . '! SPORTIX đã tiếp nhận ảnh xác nhận còn tem mác và sẽ liên hệ xác nhận hoàn tiền, hẹn lịch đến lấy lại hàng tận nơi.';
         } else {
+            if ($savedImagePath) {
+                delete_upload_file($savedImagePath);
+            }
             $_SESSION['flash_error'] = 'Không thể gửi yêu cầu hoàn hàng. Đơn hàng không ở trạng thái giao thành công hoặc đã được yêu cầu trước đó.';
         }
 
