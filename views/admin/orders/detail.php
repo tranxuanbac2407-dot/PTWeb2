@@ -18,11 +18,13 @@ $orderDate    = (string) ($order['order_date'] ?? '');
 $currStatus   = (string) ($order['order_status'] ?? 'pending');
 
 $statusLabels = [
-    'pending'    => ['text' => 'Chờ xử lý',       'icon' => 'bi-clock-history',       'class' => 'admin-order-pending'],
-    'processing' => ['text' => 'Đang xử lý',      'icon' => 'bi-gear-wide-connected', 'class' => 'admin-order-processing'],
-    'shipping'   => ['text' => 'Đang giao hàng',  'icon' => 'bi-truck',               'class' => 'admin-order-shipping'],
-    'completed'  => ['text' => 'Đã hoàn thành',   'icon' => 'bi-check-circle-fill',   'class' => 'admin-order-completed'],
-    'cancelled'  => ['text' => 'Đã hủy',          'icon' => 'bi-x-circle-fill',       'class' => 'admin-order-cancelled'],
+    'pending'        => ['text' => 'Chờ xử lý',          'icon' => 'bi-clock-history',           'class' => 'admin-order-pending'],
+    'processing'     => ['text' => 'Đang xử lý',         'icon' => 'bi-gear-wide-connected',     'class' => 'admin-order-processing'],
+    'shipping'       => ['text' => 'Đang giao hàng',     'icon' => 'bi-truck',                   'class' => 'admin-order-shipping'],
+    'completed'      => ['text' => 'Đã hoàn thành',      'icon' => 'bi-check-circle-fill',       'class' => 'admin-order-completed'],
+    'cancelled'      => ['text' => 'Đã hủy',             'icon' => 'bi-x-circle-fill',           'class' => 'admin-order-cancelled'],
+    'return_request' => ['text' => 'Yêu cầu hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
+    'returned'       => ['text' => 'Đã hoàn hàng',       'icon' => 'bi-arrow-return-left',       'class' => 'admin-order-returned'],
 ];
 
 $currStatusInfo = $statusLabels[$currStatus] ?? ['text' => $currStatus, 'icon' => 'bi-question-circle', 'class' => 'admin-order-pending'];
@@ -96,6 +98,18 @@ $payMethodLabels = [
                                 <span class="text-muted small d-block">Tài khoản đặt mua:</span>
                                 <strong><?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?></strong>
                             </div>
+                            <?php if (!empty($order['payment_status'])): ?>
+                                <div class="col-6">
+                                    <span class="text-muted small d-block">Trạng thái thanh toán:</span>
+                                    <?php if ($order['payment_status'] === 'paid'): ?>
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
+                                    <?php elseif ($order['payment_status'] === 'refunded'): ?>
+                                        <span class="badge bg-secondary"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chưa thanh toán</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -114,6 +128,8 @@ $payMethodLabels = [
                                 <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
                                 <option value="completed" <?= $currStatus === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
                                 <option value="cancelled" <?= $currStatus === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
+                                <option value="return_request" <?= $currStatus === 'return_request' ? 'selected' : '' ?>>Yêu cầu hoàn hàng</option>
+                                <option value="returned" <?= $currStatus === 'returned' ? 'selected' : '' ?>>Đã hoàn hàng</option>
                             </select>
 
                             <button type="submit" class="admin-btn admin-btn-accent">
@@ -121,6 +137,18 @@ $payMethodLabels = [
                             </button>
                         </form>
                     </div>
+
+                    <?php if (!empty($order['return_reason'])): ?>
+                        <div class="admin-return-box mt-3 p-3 rounded-3 border border-warning bg-warning bg-opacity-10">
+                            <div class="d-flex align-items-center gap-2 fw-bold text-warning-emphasis mb-2">
+                                <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                                <span>Lý do khách hàng yêu cầu hoàn hàng:</span>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-warning-subtle text-dark small">
+                                <?= nl2br(htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8')) ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

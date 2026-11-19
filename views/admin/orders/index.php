@@ -10,11 +10,13 @@ $totalOrders  = count($orders);
 
 // Ánh xạ trạng thái hiển thị
 $statusLabels = [
-    'pending'    => ['text' => 'Chờ xử lý',   'icon' => 'bi-clock-history',       'class' => 'admin-order-pending'],
-    'processing' => ['text' => 'Đang xử lý',  'icon' => 'bi-gear-wide-connected', 'class' => 'admin-order-processing'],
-    'shipping'   => ['text' => 'Đang giao',   'icon' => 'bi-truck',               'class' => 'admin-order-shipping'],
-    'completed'  => ['text' => 'Hoàn thành',  'icon' => 'bi-check-circle-fill',   'class' => 'admin-order-completed'],
-    'cancelled'  => ['text' => 'Đã hủy',      'icon' => 'bi-x-circle-fill',       'class' => 'admin-order-cancelled'],
+    'pending'        => ['text' => 'Chờ xử lý',          'icon' => 'bi-clock-history',           'class' => 'admin-order-pending'],
+    'processing'     => ['text' => 'Đang xử lý',         'icon' => 'bi-gear-wide-connected',     'class' => 'admin-order-processing'],
+    'shipping'       => ['text' => 'Đang giao',          'icon' => 'bi-truck',                   'class' => 'admin-order-shipping'],
+    'completed'      => ['text' => 'Hoàn thành',         'icon' => 'bi-check-circle-fill',       'class' => 'admin-order-completed'],
+    'cancelled'      => ['text' => 'Đã hủy',             'icon' => 'bi-x-circle-fill',           'class' => 'admin-order-cancelled'],
+    'return_request' => ['text' => 'Yêu cầu hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
+    'returned'       => ['text' => 'Đã hoàn hàng',       'icon' => 'bi-arrow-return-left',       'class' => 'admin-order-returned'],
 ];
 ?>
 
@@ -68,6 +70,8 @@ $statusLabels = [
                             <option value="shipping" <?= $status === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
                             <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
                             <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
+                            <option value="return_request" <?= $status === 'return_request' ? 'selected' : '' ?>>Yêu cầu hoàn hàng</option>
+                            <option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Đã hoàn hàng</option>
                         </select>
                     </div>
 
@@ -194,6 +198,11 @@ $statusLabels = [
                                         <i class="bi <?= htmlspecialchars($stInfo['icon'], ENT_QUOTES, 'UTF-8') ?> me-1"></i>
                                         <?= htmlspecialchars($stInfo['text'], ENT_QUOTES, 'UTF-8') ?>
                                     </span>
+                                    <?php if (!empty($order['return_reason'])): ?>
+                                        <div class="small text-danger mt-1 text-truncate mx-auto" style="max-width: 160px;" title="Lý do hoàn hàng: <?= htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8') ?>">
+                                            <i class="bi bi-chat-left-dots me-1"></i>Lý do: <?= htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8') ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
 
                                 <!-- Cột 7: Thao tác (Xem chi tiết) -->

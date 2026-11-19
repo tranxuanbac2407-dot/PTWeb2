@@ -1758,6 +1758,18 @@
     border-color: #fecaca;
 }
 
+.admin-order-return-request {
+    background: #ffedd5;
+    color: #c2410c;
+    border-color: #fed7aa;
+}
+
+.admin-order-returned {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
 /* Nút xem chi tiết */
 .admin-btn-action-view {
     color: #0284c7;
