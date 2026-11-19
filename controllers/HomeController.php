@@ -460,11 +460,57 @@ class HomeController extends BaseController
         }
 
         $items = $orderModel->getOrderItems($orderId);
+        $csrfToken = $this->csrfToken();
 
         $title = 'Đặt hàng thành công #' . $orderId . ' | SPORTIX';
         $view  = 'client/order-success';
 
         require_once PATH_VIEW_MAIN;
+    }
+
+    /**
+     * Khách hàng xác nhận đã chuyển khoản thanh toán qua mã QR.
+     */
+    public function confirmPayment()
+    {
+        $authenticatedUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để thực hiện chức năng này.');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        if (!$this->csrfValid()) {
+            $_SESSION['flash_error'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderId = (int) ($_POST['order_id'] ?? 0);
+        if ($orderId <= 0) {
+            $_SESSION['flash_error'] = 'Mã đơn hàng không hợp lệ.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->getById($orderId, (int) $authenticatedUser['id']);
+        if (!$order) {
+            $_SESSION['flash_error'] = 'Không tìm thấy đơn hàng.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderModel->updatePaymentStatus($orderId, 'paid');
+        $_SESSION['flash_success'] = 'Cảm ơn bạn! Hệ thống đã ghi nhận xác nhận chuyển khoản cho đơn hàng #' . $orderId . '.';
+
+        $returnTo = trim($_POST['return_to'] ?? '');
+        if ($returnTo === 'success') {
+            header('Location: ' . BASE_URL . '?action=order-success&id=' . $orderId);
+        } else {
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+        }
+        exit;
     }
 
     /**
@@ -513,11 +559,64 @@ class HomeController extends BaseController
         }
 
         $items = $orderModel->getOrderItems($orderId);
+        $csrfToken = $this->csrfToken();
 
         $title = 'Chi tiết đơn hàng #' . $orderId . ' | SPORTIX';
         $view  = 'client/order-detail-customer';
 
         require_once PATH_VIEW_MAIN;
+    }
+
+    /**
+     * Khách hàng gửi yêu cầu hoàn hàng.
+     */
+    public function requestReturn()
+    {
+        $authenticatedUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để thực hiện chức năng này.');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        if (!$this->csrfValid()) {
+            $_SESSION['flash_error'] = 'Phiên làm việc đã hết hạn. Vui lòng gửi lại yêu cầu.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderId = (int) ($_POST['order_id'] ?? 0);
+        $presetReason = trim($_POST['preset_reason'] ?? '');
+        $detailReason = trim($_POST['detail_reason'] ?? '');
+
+        if ($orderId <= 0) {
+            $_SESSION['flash_error'] = 'Mã đơn hàng không hợp lệ.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $fullReason = $presetReason;
+        if ($detailReason !== '') {
+            $fullReason .= ($fullReason !== '' ? ' - ' : '') . $detailReason;
+        }
+
+        if (trim($fullReason) === '') {
+            $_SESSION['flash_error'] = 'Vui lòng chọn hoặc điền lý do hoàn hàng.';
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+            exit;
+        }
+
+        $orderModel = new OrderModel();
+        $success = $orderModel->requestReturn($orderId, (int) $authenticatedUser['id'], $fullReason);
+
+        if ($success) {
+            $_SESSION['flash_success'] = 'Đã gửi yêu cầu hoàn hàng cho đơn #' . $orderId . '! Bộ phận CSKH SPORTIX sẽ liên hệ hỗ trợ bạn sớm nhất.';
+        } else {
+            $_SESSION['flash_error'] = 'Không thể gửi yêu cầu hoàn hàng. Đơn hàng không ở trạng thái giao thành công hoặc đã được yêu cầu trước đó.';
+        }
+
+        header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+        exit;
     }
 
     public function notFound()

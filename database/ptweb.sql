@@ -74,7 +74,9 @@ CREATE TABLE `orders` (
   `shipping_address` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `total_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
   `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `order_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'pending'
+  `payment_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'unpaid',
+  `order_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `return_reason` text COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

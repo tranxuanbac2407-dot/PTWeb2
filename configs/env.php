@@ -33,3 +33,10 @@ define('DB_OPTIONS', [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
+
+// Cấu hình thanh toán online qua VietQR / Ngân hàng
+define('BANK_ID',           'MB');            // Mã ngân hàng theo VietQR (MB, VCB, ACB, VPB, TCB,...)
+define('BANK_NAME',         'MBBank (Ngân hàng Quân Đội)');
+define('BANK_ACCOUNT_NO',   '0987654321');    // Số tài khoản ngân hàng của cửa hàng
+define('BANK_ACCOUNT_NAME', 'SPORTIX STORE'); // Tên chủ tài khoản thụ hưởng
+

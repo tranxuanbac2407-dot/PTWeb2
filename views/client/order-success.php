@@ -38,10 +38,38 @@ function get_order_success_status_badge($status) {
             return '<span class="badge bg-light text-dark border px-2 py-1 rounded-pill"><i class="bi bi-question-circle me-1"></i>Không xác định</span>';
     }
 }
+$csrfToken = $csrfToken ?? '';
+$flashSuccess = $_SESSION['flash_success'] ?? null;
+$flashError   = $_SESSION['flash_error'] ?? null;
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+
+$paymentMethod = $order['payment_method'] ?? 'cod';
+$paymentStatus = $order['payment_status'] ?? 'unpaid';
+$qrUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
 ?>
 
 <div class="order-success-page py-5">
     <div class="container">
+
+        <?php if (!empty($flashSuccess)): ?>
+            <div class="alert alert-success d-flex align-items-center mb-4 p-3 shadow-sm rounded-3" role="alert">
+                <i class="bi bi-check-circle-fill me-3 fs-3 text-success"></i>
+                <div>
+                    <h5 class="alert-heading fw-bold mb-1">Thao tác thành công!</h5>
+                    <p class="mb-0"><?= htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($flashError)): ?>
+            <div class="alert alert-danger d-flex align-items-center mb-4 p-3 shadow-sm rounded-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-3 fs-3 text-danger"></i>
+                <div>
+                    <h5 class="alert-heading fw-bold mb-1">Đã xảy ra sự cố!</h5>
+                    <p class="mb-0"><?= htmlspecialchars($flashError, ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Khối thông báo thành công trung tâm -->
         <div class="text-center mb-5">
@@ -89,6 +117,95 @@ function get_order_success_status_badge($status) {
                         </div>
                     </div>
                 </div>
+
+                <?php if ($paymentMethod === 'banking' || $paymentMethod === 'momo'): ?>
+                    <!-- Khối mã QR thanh toán Online VietQR -->
+                    <div class="sx-card p-4 mb-4 shadow-sm border border-primary border-opacity-25" id="qr-payment-card" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
+                            <h2 class="fs-5 fw-bold text-primary mb-0 d-flex align-items-center">
+                                <i class="bi bi-qr-code-scan me-2 fs-4"></i>Mã QR thanh toán Online
+                            </h2>
+                            <?php if ($paymentStatus === 'paid'): ?>
+                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ chuyển khoản</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Ảnh QR code VietQR -->
+                        <div class="text-center mb-3">
+                            <div class="d-inline-block p-2 bg-white rounded-3 shadow-sm border">
+                                <img src="<?= htmlspecialchars($qrUrl, ENT_QUOTES, 'UTF-8') ?>"
+                                     alt="Mã QR thanh toán VietQR đơn hàng #<?= $ordId ?>"
+                                     class="img-fluid rounded"
+                                     style="max-width: 250px; height: auto;"
+                                     loading="lazy">
+                            </div>
+                            <div class="small text-muted mt-2">
+                                <i class="bi bi-phone me-1"></i>Quét mã bằng bất kỳ App Ngân hàng hoặc Ví MoMo
+                            </div>
+                        </div>
+
+                        <!-- Thông tin chuyển khoản chi tiết kèm nút sao chép -->
+                        <div class="bg-white p-3 rounded-3 border small d-flex flex-column gap-2 mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Ngân hàng:</span>
+                                <strong class="text-dark"><?= defined('BANK_NAME') ? BANK_NAME : 'MBBank' ?></strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Chủ tài khoản:</span>
+                                <strong class="text-dark"><?= defined('BANK_ACCOUNT_NAME') ? BANK_ACCOUNT_NAME : 'SPORTIX STORE' ?></strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Số tài khoản:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <strong class="text-dark fs-6" id="copy-bank-acc"><?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?></strong>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sx-copy-btn" onclick="copyToClipboard('<?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?>', this)" title="Sao chép số tài khoản">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Số tiền:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <strong class="text-accent fs-6"><?= number_format($total, 0, ',', '.') ?> đ</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 sx-copy-btn" onclick="copyToClipboard('<?= (int) round($total) ?>', this)" title="Sao chép số tiền">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Nội dung CK:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <strong class="text-primary fs-6" id="copy-memo">SPORTIX DH<?= $ordId ?></strong>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 sx-copy-btn" onclick="copyToClipboard('SPORTIX DH<?= $ordId ?>', this)" title="Sao chép nội dung">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <?php if ($paymentStatus !== 'paid'): ?>
+                            <form action="<?= BASE_URL ?>?action=confirm-payment" method="post">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                <input type="hidden" name="order_id" value="<?= $ordId ?>">
+                                <input type="hidden" name="return_to" value="success">
+                                <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-check2-circle me-2 fs-5"></i>
+                                    <span>Tôi đã chuyển khoản xong</span>
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold">
+                                <i class="bi bi-patch-check-fill me-1"></i> Bạn đã xác nhận chuyển khoản. SPORTIX sẽ xác thực và đóng gói đơn sớm!
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Thông tin người nhận hàng -->
                 <div class="sx-card p-4 shadow-sm">
@@ -208,3 +325,44 @@ function get_order_success_status_badge($status) {
 
     </div>
 </div>
+
+<script>
+function copyToClipboard(text, btnElement) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            showCopyFeedback(btnElement);
+        }).catch(function() {
+            fallbackCopy(text, btnElement);
+        });
+    } else {
+        fallbackCopy(text, btnElement);
+    }
+}
+
+function fallbackCopy(text, btnElement) {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    try {
+        document.execCommand('copy');
+        showCopyFeedback(btnElement);
+    } catch (e) {
+        alert('Không thể sao chép, bạn hãy sao chép thủ công: ' + text);
+    }
+    document.body.removeChild(input);
+}
+
+function showCopyFeedback(btnElement) {
+    if (!btnElement) return;
+    const origHtml = btnElement.innerHTML;
+    btnElement.innerHTML = '<i class="bi bi-check2 text-success"></i>';
+    btnElement.classList.add('btn-success', 'text-white');
+    btnElement.classList.remove('btn-outline-secondary', 'btn-outline-primary');
+    setTimeout(function() {
+        btnElement.innerHTML = origHtml;
+        btnElement.classList.remove('btn-success', 'text-white');
+        btnElement.classList.add(origHtml.includes('primary') ? 'btn-outline-primary' : 'btn-outline-secondary');
+    }, 1800);
+}
+</script>

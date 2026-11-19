@@ -20,6 +20,10 @@ function render_order_status_badge($status) {
             return '<span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2 rounded-pill"><i class="bi bi-truck me-1"></i> Đang giao hàng</span>';
         case 'processing':
             return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill"><i class="bi bi-box-seam me-1"></i> Đang chuẩn bị hàng</span>';
+        case 'return_request':
+            return '<span class="badge bg-warning-subtle text-dark border border-warning-subtle px-3 py-2 rounded-pill"><i class="bi bi-arrow-counterclockwise me-1 text-warning"></i> Chờ xử lý hoàn hàng</span>';
+        case 'returned':
+            return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill"><i class="bi bi-arrow-return-left me-1"></i> Đã hoàn hàng</span>';
         case 'cancelled':
             return '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill"><i class="bi bi-x-circle me-1"></i> Đã hủy</span>';
         case 'pending':
@@ -161,7 +165,12 @@ function get_payment_name($method) {
                                         <div class="mt-1"><strong class="text-dark"><i class="bi bi-geo-alt me-1"></i>Địa chỉ:</strong> <?= htmlspecialchars($order['shipping_address'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
                                     </div>
                                     <div class="col-12 col-md-6 text-md-end">
-                                        <div><strong class="text-dark">Thanh toán:</strong> <?= get_payment_name($order['payment_method'] ?? 'cod') ?></div>
+                                        <div>
+                                            <strong class="text-dark">Thanh toán:</strong> <?= get_payment_name($order['payment_method'] ?? 'cod') ?>
+                                            <?php if (($order['payment_status'] ?? '') === 'paid'): ?>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">Đã thanh toán</span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -175,6 +184,13 @@ function get_payment_name($method) {
                             </div>
 
                             <div class="d-flex gap-2">
+                                <?php if (($order['order_status'] ?? '') === 'completed'): ?>
+                                    <a href="<?= BASE_URL ?>?action=order-detail&amp;id=<?= $ordId ?>#return-box"
+                                       class="btn btn-sm btn-outline-danger fw-semibold"
+                                       title="Gửi yêu cầu hoàn hàng cho đơn này">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn hàng
+                                    </a>
+                                <?php endif; ?>
                                 <a href="<?= BASE_URL ?>?action=order-detail&amp;id=<?= $ordId ?>"
                                    class="btn btn-sm btn-outline-primary fw-semibold">
                                     <i class="bi bi-eye me-1"></i> Xem chi tiết

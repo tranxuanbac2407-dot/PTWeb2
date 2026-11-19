@@ -160,3 +160,30 @@ if (!function_exists('get_product_image_url')) {
         return BASE_ASSETS_UPLOADS . ltrim($image, '/');
     }
 }
+
+if (!function_exists('get_vietqr_url')) {
+    /**
+     * Tạo đường dẫn ảnh mã VietQR tự động theo chuẩn Napas 24/7.
+     * Sử dụng dịch vụ VietQR API mở giúp khách hàng quét mã chuyển tiền chính xác.
+     *
+     * @param int|float   $amount  Số tiền cần thanh toán
+     * @param string      $memo    Nội dung chuyển khoản (VD: SPORTIX DH12)
+     * @param string|null $bank    Mã ngân hàng (VD: MB, VCB)
+     * @param string|null $account Số tài khoản thụ hưởng
+     * @param string|null $name    Tên chủ tài khoản
+     * @param string      $template Giao diện QR (compact2, compact, qr_only, print)
+     * @return string
+     */
+    function get_vietqr_url($amount, $memo = '', $bank = null, $account = null, $name = null, $template = 'compact2')
+    {
+        $bankId   = $bank ?? (defined('BANK_ID') ? BANK_ID : 'MB');
+        $accNo    = $account ?? (defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321');
+        $accName  = $name ?? (defined('BANK_ACCOUNT_NAME') ? BANK_ACCOUNT_NAME : 'SPORTIX STORE');
+
+        $cleanAmount = (int) round($amount);
+        $cleanMemo   = urlencode(trim((string) $memo));
+        $cleanName   = urlencode(trim((string) $accName));
+
+        return "https://img.vietqr.io/image/{$bankId}-{$accNo}-{$template}.png?amount={$cleanAmount}&addInfo={$cleanMemo}&accountName={$cleanName}";
+    }
+}
