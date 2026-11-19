@@ -194,10 +194,31 @@ $statusLabels = [
 
                                 <!-- Cột 6: Trạng thái (Trạng thái hiện tại) -->
                                 <td class="text-center">
+                                    <?php
+                                        $rowIsOnline = (($order['payment_method'] ?? 'cod') !== 'cod');
+                                        $rowIsPaid   = (($order['payment_status'] ?? 'unpaid') === 'paid');
+                                    ?>
                                     <span class="admin-order-badge <?= htmlspecialchars($stInfo['class'], ENT_QUOTES, 'UTF-8') ?>">
                                         <i class="bi <?= htmlspecialchars($stInfo['icon'], ENT_QUOTES, 'UTF-8') ?> me-1"></i>
                                         <?= htmlspecialchars($stInfo['text'], ENT_QUOTES, 'UTF-8') ?>
                                     </span>
+
+                                    <div class="mt-1">
+                                        <?php if ($rowIsOnline): ?>
+                                            <?php if ($rowIsPaid): ?>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Đã TT thành công
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-0 px-2" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Chưa TT online
+                                                </span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-secondary border py-0 px-2" style="font-size: 0.72rem;">COD</span>
+                                        <?php endif; ?>
+                                    </div>
+
                                     <?php if (!empty($order['return_reason'])): ?>
                                         <div class="small text-danger mt-1 text-truncate mx-auto" style="max-width: 160px;" title="Lý do hoàn hàng: <?= htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8') ?>">
                                             <i class="bi bi-chat-left-dots me-1"></i>Lý do: <?= htmlspecialchars($order['return_reason'], ENT_QUOTES, 'UTF-8') ?>
