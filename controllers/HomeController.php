@@ -460,11 +460,57 @@ class HomeController extends BaseController
         }
 
         $items = $orderModel->getOrderItems($orderId);
+        $csrfToken = $this->csrfToken();
 
         $title = 'Đặt hàng thành công #' . $orderId . ' | SPORTIX';
         $view  = 'client/order-success';
 
         require_once PATH_VIEW_MAIN;
+    }
+
+    /**
+     * Khách hàng xác nhận đã chuyển khoản thanh toán qua mã QR.
+     */
+    public function confirmPayment()
+    {
+        $authenticatedUser = $this->requireAuthenticatedUser('', 'Vui lòng đăng nhập để thực hiện chức năng này.');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        if (!$this->csrfValid()) {
+            $_SESSION['flash_error'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderId = (int) ($_POST['order_id'] ?? 0);
+        if ($orderId <= 0) {
+            $_SESSION['flash_error'] = 'Mã đơn hàng không hợp lệ.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->getById($orderId, (int) $authenticatedUser['id']);
+        if (!$order) {
+            $_SESSION['flash_error'] = 'Không tìm thấy đơn hàng.';
+            header('Location: ' . BASE_URL . '?action=order-history');
+            exit;
+        }
+
+        $orderModel->updatePaymentStatus($orderId, 'paid');
+        $_SESSION['flash_success'] = 'Cảm ơn bạn! Hệ thống đã ghi nhận xác nhận chuyển khoản cho đơn hàng #' . $orderId . '.';
+
+        $returnTo = trim($_POST['return_to'] ?? '');
+        if ($returnTo === 'success') {
+            header('Location: ' . BASE_URL . '?action=order-success&id=' . $orderId);
+        } else {
+            header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
+        }
+        exit;
     }
 
     /**

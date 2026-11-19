@@ -20,6 +20,7 @@ match ($action) {
     'order-history'  => (new HomeController)->orderHistory(),
     'order-detail'   => (new HomeController)->orderDetailCustomer(),
     'order-return'   => (new HomeController)->requestReturn(),
+    'confirm-payment'=> (new HomeController)->confirmPayment(),
     'register'       => (new AuthController)->register(),
     'login'    => (new AuthController)->login(),
     'logout'   => (new AuthController)->logout(),

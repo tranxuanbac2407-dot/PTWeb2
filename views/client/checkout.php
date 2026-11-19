@@ -135,14 +135,17 @@ $defaultAddress = $currentUser['address'] ?? '';
                             </label>
 
                             <!-- Chuyển khoản ngân hàng -->
-                            <label class="payment-method-item d-flex align-items-center p-3 border rounded-3 cursor-pointer">
-                                <input type="radio" name="payment_method" value="banking" class="form-check-input me-3">
+                            <label class="payment-method-item d-flex align-items-start p-3 border rounded-3 cursor-pointer">
+                                <input type="radio" name="payment_method" value="banking" class="form-check-input me-3 mt-1">
                                 <div class="flex-grow-1">
-                                    <div class="fw-bold d-flex align-items-center gap-2">
-                                        <i class="bi bi-bank text-primary fs-5"></i>
-                                        Chuyển khoản ngân hàng (QR Code 24/7)
+                                    <div class="fw-bold d-flex align-items-center justify-content-between flex-wrap gap-1">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-qr-code-scan text-primary fs-5"></i>
+                                            Chuyển khoản ngân hàng (Mã VietQR 24/7)
+                                        </span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Khuyên dùng</span>
                                     </div>
-                                    <div class="small text-muted mt-1">Chuyển khoản nhanh qua quét mã VietQR tự động xác nhận đơn trong 1 phút.</div>
+                                    <div class="small text-muted mt-1">Quét mã VietQR trên App Ngân hàng (MB, VCB, Techcombank,...) tự động điền chính xác số tiền và mã đơn hàng.</div>
                                 </div>
                             </label>
 

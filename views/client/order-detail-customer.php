@@ -263,12 +263,100 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                     </div>
                 </div>
 
+                <?php if (($order['payment_method'] ?? '') === 'banking' || ($order['payment_method'] ?? '') === 'momo'): ?>
+                    <?php
+                        $paymentStatus = $order['payment_status'] ?? 'unpaid';
+                        $qrDetailUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
+                    ?>
+                    <div class="sx-card p-4 mb-4 border border-primary border-opacity-25" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
+                            <h4 class="fs-6 fw-bold text-primary mb-0 d-flex align-items-center">
+                                <i class="bi bi-qr-code-scan me-2 fs-5"></i>Mã VietQR thanh toán
+                            </h4>
+                            <?php if ($paymentStatus === 'paid'): ?>
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Chờ chuyển khoản</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="text-center mb-3">
+                            <div class="d-inline-block p-2 bg-white rounded-3 shadow-sm border">
+                                <img src="<?= htmlspecialchars($qrDetailUrl, ENT_QUOTES, 'UTF-8') ?>"
+                                     alt="VietQR #<?= $ordId ?>"
+                                     class="img-fluid rounded"
+                                     style="max-width: 200px; height: auto;"
+                                     loading="lazy">
+                            </div>
+                            <div class="small text-muted mt-2">
+                                Quét mã bằng App Ngân hàng để chuyển tiền tự động
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-2 rounded border small d-flex flex-column gap-2 mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Ngân hàng:</span>
+                                <strong><?= defined('BANK_NAME') ? BANK_NAME : 'MBBank' ?></strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Số tài khoản:</span>
+                                <div class="d-flex align-items-center gap-1">
+                                    <strong><?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?></strong>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="copyToClipboard('<?= defined('BANK_ACCOUNT_NO') ? BANK_ACCOUNT_NO : '0987654321' ?>', this)" title="Sao chép">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Số tiền:</span>
+                                <div class="d-flex align-items-center gap-1">
+                                    <strong class="text-accent"><?= number_format($total, 0, ',', '.') ?> đ</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="copyToClipboard('<?= (int) round($total) ?>', this)" title="Sao chép">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Nội dung CK:</span>
+                                <div class="d-flex align-items-center gap-1">
+                                    <strong class="text-primary">SPORTIX DH<?= $ordId ?></strong>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1" onclick="copyToClipboard('SPORTIX DH<?= $ordId ?>', this)" title="Sao chép">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <?php if ($paymentStatus !== 'paid' && $status !== 'cancelled'): ?>
+                            <form action="<?= BASE_URL ?>?action=confirm-payment" method="post">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                <input type="hidden" name="order_id" value="<?= $ordId ?>">
+                                <input type="hidden" name="return_to" value="detail">
+                                <button type="submit" class="btn btn-success btn-sm w-100 fw-bold py-2">
+                                    <i class="bi bi-check2-circle me-1"></i> Tôi đã hoàn tất chuyển khoản
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
                 <div class="sx-card p-4">
                     <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom">Thanh toán</h3>
 
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Phương thức:</span>
                         <span class="fw-semibold text-dark text-end"><?= get_detail_payment_name($order['payment_method'] ?? 'cod') ?></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Trạng thái TT:</span>
+                        <?php if (($order['payment_status'] ?? '') === 'paid'): ?>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
+                        <?php elseif (($order['payment_status'] ?? '') === 'refunded'): ?>
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                        <?php else: ?>
+                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-clock me-1"></i>Chưa thanh toán</span>
+                        <?php endif; ?>
                     </div>
 
                     <div class="d-flex justify-content-between mb-2">
@@ -358,8 +446,44 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <script>
+function copyToClipboard(text, btnElement) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            showCopyFeedback(btnElement);
+        }).catch(function() {
+            fallbackCopy(text, btnElement);
+        });
+    } else {
+        fallbackCopy(text, btnElement);
+    }
+}
+
+function fallbackCopy(text, btnElement) {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    try {
+        document.execCommand('copy');
+        showCopyFeedback(btnElement);
+    } catch (e) {
+        alert('Không thể sao chép: ' + text);
+    }
+    document.body.removeChild(input);
+}
+
+function showCopyFeedback(btnElement) {
+    if (!btnElement) return;
+    const origHtml = btnElement.innerHTML;
+    btnElement.innerHTML = '<i class="bi bi-check2 text-success"></i>';
+    setTimeout(function() {
+        btnElement.innerHTML = origHtml;
+    }, 1800);
+}
+
 function toggleReturnModal(show) {
     const modal = document.getElementById('modalReturnOrder');
     if (modal) {
@@ -389,4 +513,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-<?php endif; ?>
