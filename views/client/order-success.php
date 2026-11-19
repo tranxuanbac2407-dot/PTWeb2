@@ -126,9 +126,9 @@ $qrUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH'
                                 <i class="bi bi-qr-code-scan me-2 fs-4"></i>Mã QR thanh toán Online
                             </h2>
                             <?php if ($paymentStatus === 'paid'): ?>
-                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
+                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ chuyển khoản</span>
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
                             <?php endif; ?>
                         </div>
 
@@ -199,9 +199,12 @@ $qrUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH'
                                     <span>Tôi đã chuyển khoản xong</span>
                                 </button>
                             </form>
+                            <div class="text-muted text-center small mt-2" style="font-size: 0.78rem;">
+                                <i class="bi bi-info-circle me-1"></i>Đơn hàng online chỉ được giao sau khi đã thanh toán thành công và admin xác nhận.
+                            </div>
                         <?php else: ?>
                             <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold">
-                                <i class="bi bi-patch-check-fill me-1"></i> Bạn đã xác nhận chuyển khoản. SPORTIX sẽ xác thực và đóng gói đơn sớm!
+                                <i class="bi bi-patch-check-fill me-1"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng sẽ được giao đến bạn sớm nhất.
                             </div>
                         <?php endif; ?>
                     </div>

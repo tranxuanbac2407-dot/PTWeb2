@@ -12,7 +12,11 @@ $flashError   = $_SESSION['flash_error'] ?? null;
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 // Helper hiển thị badge trạng thái
-function render_order_status_badge($status) {
+function render_order_status_badge($status, $payMethod = 'cod', $payStatus = 'unpaid') {
+    if ($status === 'shipping' && $payMethod !== 'cod' && $payStatus === 'paid') {
+        return '<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill"><i class="bi bi-truck me-1"></i> Đã TT thành công &amp; Đang giao hàng</span>';
+    }
+
     switch ($status) {
         case 'completed':
             return '<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Giao thành công</span>';
@@ -105,7 +109,7 @@ function get_payment_name($method) {
                             </div>
 
                             <div>
-                                <?= render_order_status_badge($order['order_status'] ?? 'pending') ?>
+                                <?= render_order_status_badge($order['order_status'] ?? 'pending', $order['payment_method'] ?? 'cod', $order['payment_status'] ?? 'unpaid') ?>
                             </div>
                         </div>
 
@@ -167,8 +171,12 @@ function get_payment_name($method) {
                                     <div class="col-12 col-md-6 text-md-end">
                                         <div>
                                             <strong class="text-dark">Thanh toán:</strong> <?= get_payment_name($order['payment_method'] ?? 'cod') ?>
-                                            <?php if (($order['payment_status'] ?? '') === 'paid'): ?>
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">Đã thanh toán</span>
+                                            <?php if (($order['payment_method'] ?? 'cod') !== 'cod'): ?>
+                                                <?php if (($order['payment_status'] ?? '') === 'paid'): ?>
+                                                    <span class="badge bg-success text-white ms-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning text-dark ms-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
                                     </div>
