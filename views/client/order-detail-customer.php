@@ -174,6 +174,46 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         </button>
                     </div>
                 <?php endif; ?>
+
+                <?php
+                    $isOnlineMethod = (($order['payment_method'] ?? 'cod') !== 'cod');
+                    $isPaidStatus   = (($order['payment_status'] ?? 'unpaid') === 'paid');
+                ?>
+
+                <?php if ($isOnlineMethod && $isPaidStatus && $status === 'shipping'): ?>
+                    <!-- Banner nổi bật: Đã thanh toán thành công và đang giao hàng -->
+                    <div class="alert alert-success d-flex align-items-center mb-0 mt-3 p-3 rounded-3 shadow-sm border border-success-subtle">
+                        <i class="bi bi-truck fs-1 me-3 text-success"></i>
+                        <div>
+                            <h5 class="alert-heading fw-bold mb-1 text-success">
+                                <i class="bi bi-check-circle-fill me-1"></i> Đã thanh toán thành công và đang giao hàng
+                            </h5>
+                            <p class="mb-0 small text-dark">
+                                Đơn hàng của bạn đã được admin xác nhận thanh toán thành công qua hình thức Online. Shipper đang trên đường vận chuyển sản phẩm tới địa chỉ nhận hàng!
+                            </p>
+                        </div>
+                    </div>
+                <?php elseif ($isOnlineMethod && !$isPaidStatus && $status !== 'cancelled'): ?>
+                    <div class="alert alert-warning d-flex align-items-center mb-0 mt-3 p-3 rounded-3 border border-warning-subtle">
+                        <i class="bi bi-info-circle-fill fs-3 me-3 text-warning"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">Đơn hàng Online: Chờ xác nhận thanh toán</h6>
+                            <p class="mb-0 small text-muted">
+                                Quý khách vui lòng quét mã VietQR để hoàn tất chuyển khoản. <strong>Chỉ có thanh toán thành công thì mới giao hàng.</strong> Hệ thống sẽ xác nhận và tiến hành giao hàng ngay khi nhận được tiền.
+                            </p>
+                        </div>
+                    </div>
+                <?php elseif (!$isOnlineMethod && $status === 'shipping'): ?>
+                    <div class="alert alert-info d-flex align-items-center mb-0 mt-3 p-3 rounded-3 border border-info-subtle">
+                        <i class="bi bi-truck fs-2 me-3 text-info"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">Đang giao hàng (Thanh toán khi nhận hàng COD)</h6>
+                            <p class="mb-0 small text-muted">
+                                Đơn hàng đang trên đường vận chuyển. Quý khách vui lòng chuẩn bị số tiền <strong><?= number_format($total, 0, ',', '.') ?> đ</strong> để thanh toán cho nhân viên giao hàng khi nhận sản phẩm.
+                            </p>
+                        </div>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 
@@ -336,6 +376,10 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                     <i class="bi bi-check2-circle me-1"></i> Tôi đã hoàn tất chuyển khoản
                                 </button>
                             </form>
+                        <?php else: ?>
+                            <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold">
+                                <i class="bi bi-patch-check-fill me-1"></i> Admin đã xác nhận thanh toán thành công!
+                            </div>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -350,12 +394,20 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Trạng thái TT:</span>
-                        <?php if (($order['payment_status'] ?? '') === 'paid'): ?>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
-                        <?php elseif (($order['payment_status'] ?? '') === 'refunded'): ?>
-                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                        <?php if ($isOnlineMethod): ?>
+                            <?php if ($isPaidStatus): ?>
+                                <span class="badge bg-success text-white px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                            <?php elseif (($order['payment_status'] ?? '') === 'refunded'): ?>
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                            <?php endif; ?>
                         <?php else: ?>
-                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-clock me-1"></i>Chưa thanh toán</span>
+                            <?php if ($status === 'completed'): ?>
+                                <span class="badge bg-success text-white px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán (COD)</span>
+                            <?php else: ?>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1"><i class="bi bi-cash me-1"></i>Thanh toán khi nhận hàng</span>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
 

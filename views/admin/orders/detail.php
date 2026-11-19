@@ -29,10 +29,13 @@ $statusLabels = [
 
 $currStatusInfo = $statusLabels[$currStatus] ?? ['text' => $currStatus, 'icon' => 'bi-question-circle', 'class' => 'admin-order-pending'];
 
+$isOnlinePayment = ($payMethod !== 'cod');
+$isPaid = (($order['payment_status'] ?? 'unpaid') === 'paid');
+
 $payMethodLabels = [
     'cod'     => 'Thanh toán khi nhận hàng (COD)',
     'momo'    => 'Ví điện tử MoMo',
-    'banking' => 'Chuyển khoản ngân hàng',
+    'banking' => 'Chuyển khoản ngân hàng (VietQR 24/7)',
     'vnpay'   => 'Cổng thanh toán VNPAY',
 ];
 ?>
@@ -98,20 +101,65 @@ $payMethodLabels = [
                                 <span class="text-muted small d-block">Tài khoản đặt mua:</span>
                                 <strong><?= htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') ?></strong>
                             </div>
-                            <?php if (!empty($order['payment_status'])): ?>
-                                <div class="col-6">
-                                    <span class="text-muted small d-block">Trạng thái thanh toán:</span>
-                                    <?php if ($order['payment_status'] === 'paid'): ?>
-                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>
-                                    <?php elseif ($order['payment_status'] === 'refunded'): ?>
-                                        <span class="badge bg-secondary"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                            <div class="col-6">
+                                <span class="text-muted small d-block">Trạng thái thanh toán:</span>
+                                <?php if ($isOnlinePayment): ?>
+                                    <?php if ($isPaid): ?>
+                                        <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                                    <?php elseif (($order['payment_status'] ?? '') === 'refunded'): ?>
+                                        <span class="badge bg-secondary px-2 py-1"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
                                     <?php else: ?>
-                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chưa thanh toán</span>
+                                        <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chưa thanh toán (Chờ xác nhận)</span>
                                     <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
+                                <?php else: ?>
+                                    <?php if ($currStatus === 'completed'): ?>
+                                        <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i>Đã thu tiền mặt</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1"><i class="bi bi-cash me-1"></i>Thu tiền mặt khi nhận hàng (COD)</span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
+
+                    <?php if ($isOnlinePayment && $isPaid && $currStatus === 'shipping'): ?>
+                        <!-- Banner nổi bật: Đã thanh toán thành công & đang giao hàng -->
+                        <div class="alert alert-success d-flex align-items-center p-3 mb-3 rounded-3 border border-success-subtle shadow-sm">
+                            <i class="bi bi-truck fs-1 me-3 text-success"></i>
+                            <div>
+                                <h5 class="alert-heading fw-bold mb-1 text-success">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Đã thanh toán thành công &amp; Đang giao hàng
+                                </h5>
+                                <p class="mb-0 small text-dark">
+                                    Đơn hàng Online đã được xác nhận thanh toán thành công qua tài khoản ngân hàng. Sản phẩm hiện đang trong tiến trình giao hàng đến khách.
+                                </p>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($isOnlinePayment && !$isPaid): ?>
+                        <!-- Khối hành động: Xác nhận thanh toán Online & Bắt đầu giao hàng -->
+                        <div class="admin-payment-action-card p-3 mb-3 rounded-3 border border-primary bg-primary bg-opacity-10">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <h5 class="fs-6 fw-bold text-primary mb-1 d-flex align-items-center">
+                                        <i class="bi bi-qr-code-scan me-2 fs-5"></i>Xác nhận thanh toán Online &amp; Bắt đầu giao hàng
+                                    </h5>
+                                    <p class="mb-0 text-muted small">
+                                        Khách hàng chọn thanh toán Online. <strong>Chỉ có thanh toán thành công thì mới giao hàng.</strong> Khi tiền đã về tài khoản, hãy nhấn xác nhận:
+                                    </p>
+                                </div>
+                                <form action="<?= BASE_URL ?>?action=admin-order-confirm-payment" method="post" class="m-0" onsubmit="return confirm('Bạn xác nhận tài khoản đã nhận đủ số tiền <?= number_format($totalAmount, 0, ',', '.') ?> đ và muốn chuyển đơn sang trạng thái ĐANG GIAO HÀNG?');">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                    <input type="hidden" name="order_id" value="<?= $orderId ?>">
+                                    <button type="submit" class="admin-btn admin-btn-accent fw-bold py-2 px-3 d-flex align-items-center">
+                                        <i class="bi bi-check2-all me-1 fs-5"></i>
+                                        <span>Xác nhận đã thanh toán &amp; Giao hàng</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <!-- Form cập nhật trạng thái đơn hàng -->
                     <div class="admin-status-update-box p-3 rounded-3 bg-light border">
@@ -125,7 +173,13 @@ $payMethodLabels = [
                             <select name="order_status" class="admin-form-input admin-select-filter" style="min-width: 200px;">
                                 <option value="pending" <?= $currStatus === 'pending' ? 'selected' : '' ?>>Chờ xử lý</option>
                                 <option value="processing" <?= $currStatus === 'processing' ? 'selected' : '' ?>>Đang xử lý</option>
-                                <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
+                                <?php if ($isOnlinePayment && !$isPaid): ?>
+                                    <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?> disabled>
+                                        Đang giao hàng (Cần TT thành công trước)
+                                    </option>
+                                <?php else: ?>
+                                    <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
+                                <?php endif; ?>
                                 <option value="completed" <?= $currStatus === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
                                 <option value="cancelled" <?= $currStatus === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
                                 <option value="return_request" <?= $currStatus === 'return_request' ? 'selected' : '' ?>>Yêu cầu hoàn hàng</option>
@@ -136,6 +190,15 @@ $payMethodLabels = [
                                 <i class="bi bi-check2-circle me-1"></i> Lưu trạng thái
                             </button>
                         </form>
+                        <?php if ($isOnlinePayment && !$isPaid): ?>
+                            <div class="form-text text-danger mt-1 small">
+                                <i class="bi bi-exclamation-circle me-1"></i>Đơn hàng online: Chỉ có thanh toán thành công thì mới giao hàng.
+                            </div>
+                        <?php elseif (!$isOnlinePayment): ?>
+                            <div class="form-text text-muted mt-1 small">
+                                <i class="bi bi-info-circle me-1"></i>Đơn hàng COD: Khách hàng thanh toán tiền mặt khi nhận hàng từ shipper.
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <?php if (!empty($order['return_reason'])): ?>
