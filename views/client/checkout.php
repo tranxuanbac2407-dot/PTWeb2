@@ -4,7 +4,7 @@
  * Giao diện đặt hàng và thanh toán SPORTIX.
  */
 
-$cart = $_SESSION['cart'] ?? [];
+$cart = $cart ?? [];
 $currentUser = $_SESSION['user'] ?? null;
 
 $subtotal = 0;

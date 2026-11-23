@@ -14,6 +14,7 @@ match ($action) {
     'cart-qty'       => (new HomeController)->changeCartQty(),
     'cart-remove'    => (new HomeController)->removeFromCart(),
     'cart-clear'     => (new HomeController)->clearCart(),
+    'cart-checkout'  => (new HomeController)->prepareCheckout(),
     'checkout'       => (new HomeController)->checkout(),
     'place-order'    => (new HomeController)->placeOrder(),
     'order-success'  => (new HomeController)->orderSuccess(),

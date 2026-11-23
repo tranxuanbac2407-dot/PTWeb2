@@ -219,14 +219,12 @@ class OrderModel extends BaseModel
                 return 0;
             }
 
-            // Insert từng món hàng vào order_items & tự động cập nhật trừ tồn kho
             $itemSql = 'INSERT INTO order_items '
                      . '(order_id, product_id, product_name, size, color, unit_price, quantity, subtotal) '
                      . 'VALUES (:order_id, :product_id, :product_name, :size, :color, :unit_price, :quantity, :subtotal)';
             $itemStmt = $this->pdo->prepare($itemSql);
 
-            // Câu lệnh tự động cập nhật giảm số lượng tồn kho trong kho sản phẩm
-            $stockSql = 'UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - :qty) WHERE product_id = :p_id';
+            $stockSql = 'UPDATE products SET stock_quantity = stock_quantity - :qty WHERE product_id = :p_id AND stock_quantity >= :qty';
             $stockStmt = $this->pdo->prepare($stockSql);
 
             foreach ($cartItems as $item) {
@@ -234,6 +232,10 @@ class OrderModel extends BaseModel
                 $qty       = (int) ($item['quantity'] ?? 1);
                 $subtotal  = $unitPrice * $qty;
                 $pId       = (int) ($item['product_id'] ?? 0);
+
+                if ($pId <= 0 || $qty <= 0 || $unitPrice < 0) {
+                    throw new RuntimeException('Dữ liệu sản phẩm trong giỏ hàng không hợp lệ.');
+                }
 
                 $itemStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
                 $itemStmt->bindValue(':product_id', $pId, PDO::PARAM_INT);
@@ -245,29 +247,16 @@ class OrderModel extends BaseModel
                 $itemStmt->bindValue(':subtotal', $subtotal);
                 $itemStmt->execute();
 
-                // Tự động trừ tồn kho nếu có product_id hợp lệ
-                if ($pId > 0) {
-                    try {
-                        $stockStmt->bindValue(':qty', $qty, PDO::PARAM_INT);
-                        $stockStmt->bindValue(':p_id', $pId, PDO::PARAM_INT);
-                        $stockStmt->execute();
-                    } catch (Throwable $stockEx) {
-                        // Bỏ qua nếu bảng products chưa có cột stock_quantity hoặc không hỗ trợ
-                    }
+                $stockStmt->bindValue(':qty', $qty, PDO::PARAM_INT);
+                $stockStmt->bindValue(':p_id', $pId, PDO::PARAM_INT);
+                $stockStmt->execute();
+
+                if ($stockStmt->rowCount() < 1) {
+                    throw new RuntimeException('Sản phẩm "' . (string) ($item['name'] ?? 'Sản phẩm') . '" không đủ tồn kho.');
                 }
             }
 
-            // Tự động dọn dẹp giỏ hàng trong database nếu người dùng đã đăng nhập
-            if ($userId > 0) {
-                try {
-                    $clearCartSql = 'DELETE ci FROM cart_items ci INNER JOIN carts c ON ci.cart_id = c.cart_id WHERE c.user_id = :u_id';
-                    $clearCartStmt = $this->pdo->prepare($clearCartSql);
-                    $clearCartStmt->bindValue(':u_id', $userId, PDO::PARAM_INT);
-                    $clearCartStmt->execute();
-                } catch (Throwable $cartEx) {
-                    // Bỏ qua nếu cấu trúc giỏ hàng database chưa khởi tạo
-                }
-            }
+            $this->removePurchasedDbCartItems($userId, $cartItems);
 
             $this->pdo->commit();
             return $orderId;
@@ -277,6 +266,71 @@ class OrderModel extends BaseModel
             }
 
             return 0;
+        }
+    }
+
+    private function removePurchasedDbCartItems($userId, array $cartItems)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0 || empty($cartItems)) {
+            return;
+        }
+
+        try {
+            $sql = 'SELECT ci.cart_item_id, ci.product_id, ci.size, ci.color, ci.quantity '
+                 . 'FROM cart_items ci INNER JOIN carts c ON ci.cart_id = c.cart_id '
+                 . 'WHERE c.user_id = :u_id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':u_id', $userId, PDO::PARAM_INT);
+            $statement->execute();
+            $dbItems = $statement->fetchAll();
+        } catch (Throwable $e) {
+            return;
+        }
+
+        $needed = [];
+        foreach ($cartItems as $item) {
+            $productId = (int) ($item['product_id'] ?? 0);
+            $quantity = (int) ($item['quantity'] ?? 0);
+            if ($productId <= 0 || $quantity <= 0) {
+                continue;
+            }
+
+            $signature = $productId . '|' . trim((string) ($item['size'] ?? '')) . '|' . trim((string) ($item['color'] ?? ''));
+            $needed[$signature] = ($needed[$signature] ?? 0) + $quantity;
+        }
+
+        if (empty($needed) || empty($dbItems)) {
+            return;
+        }
+
+        try {
+            foreach ($dbItems as $dbItem) {
+                $signature = (int) $dbItem['product_id'] . '|' . trim((string) ($dbItem['size'] ?? '')) . '|' . trim((string) ($dbItem['color'] ?? ''));
+                if (!isset($needed[$signature]) || $needed[$signature] <= 0) {
+                    continue;
+                }
+
+                $dbQuantity = (int) ($dbItem['quantity'] ?? 0);
+                $removeQuantity = min($dbQuantity, $needed[$signature]);
+                if ($removeQuantity <= 0) {
+                    continue;
+                }
+
+                if ($dbQuantity > $removeQuantity) {
+                    $update = $this->pdo->prepare('UPDATE cart_items SET quantity = quantity - :qty WHERE cart_item_id = :id');
+                    $update->bindValue(':qty', $removeQuantity, PDO::PARAM_INT);
+                    $update->bindValue(':id', (int) $dbItem['cart_item_id'], PDO::PARAM_INT);
+                    $update->execute();
+                } else {
+                    $delete = $this->pdo->prepare('DELETE FROM cart_items WHERE cart_item_id = :id');
+                    $delete->bindValue(':id', (int) $dbItem['cart_item_id'], PDO::PARAM_INT);
+                    $delete->execute();
+                }
+
+                $needed[$signature] -= $removeQuantity;
+            }
+        } catch (Throwable $e) {
         }
     }
 
