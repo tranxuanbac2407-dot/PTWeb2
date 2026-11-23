@@ -46,6 +46,7 @@ match ($action) {
     'admin-return-detail'         => (new AdminController)->returnDetail(),
     'admin-return-accept'         => (new AdminController)->returnAccept(),
     'admin-return-reject'         => (new AdminController)->returnReject(),
+    'admin-return-complete'       => (new AdminController)->returnComplete(),
 
     default    => (new HomeController)->notFound(),
 };

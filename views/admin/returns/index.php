@@ -9,10 +9,10 @@ $flashSuccess = $flashSuccess ?? null;
 $flashError   = $flashError ?? null;
 
 $statusLabels = [
-    'return_request'  => ['text' => 'Chờ xử lý',    'icon' => 'bi-hourglass-split',  'class' => 'admin-return-badge--pending'],
-    'return_accepted' => ['text' => 'Đã chấp nhận', 'icon' => 'bi-check-circle-fill', 'class' => 'admin-return-badge--accepted'],
-    'return_rejected' => ['text' => 'Đã từ chối',   'icon' => 'bi-x-circle-fill',     'class' => 'admin-return-badge--rejected'],
-    'returned'        => ['text' => 'Đã hoàn tất',  'icon' => 'bi-arrow-return-left', 'class' => 'admin-return-badge--completed'],
+    'return_request'  => ['text' => 'Chờ xử lý hoàn hàng', 'icon' => 'bi-hourglass-split',   'class' => 'admin-return-badge--pending'],
+    'return_accepted' => ['text' => 'Đã chấp nhận hoàn hàng', 'icon' => 'bi-check-circle-fill', 'class' => 'admin-return-badge--accepted'],
+    'return_rejected' => ['text' => 'Đã từ chối hoàn hàng', 'icon' => 'bi-x-circle-fill',     'class' => 'admin-return-badge--rejected'],
+    'returned'        => ['text' => 'Hoàn tất hoàn hàng', 'icon' => 'bi-arrow-return-left',   'class' => 'admin-return-badge--completed'],
 ];
 ?>
 <div class="admin-returns-page">
@@ -39,17 +39,17 @@ $statusLabels = [
         </div>
         <div class="admin-return-stat-card admin-return-stat-card--pending">
             <span class="admin-return-stat-card__icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
-            <span class="admin-return-stat-card__label">Chờ xử lý</span>
+            <span class="admin-return-stat-card__label">Chờ xử lý hoàn hàng</span>
             <strong class="admin-return-stat-card__value"><?= (int) ($stats['pending'] ?? 0) ?></strong>
         </div>
         <div class="admin-return-stat-card admin-return-stat-card--accepted">
             <span class="admin-return-stat-card__icon"><i class="bi bi-check-circle-fill" aria-hidden="true"></i></span>
-            <span class="admin-return-stat-card__label">Đã chấp nhận</span>
+            <span class="admin-return-stat-card__label">Đã chấp nhận hoàn hàng</span>
             <strong class="admin-return-stat-card__value"><?= (int) ($stats['accepted'] ?? 0) ?></strong>
         </div>
         <div class="admin-return-stat-card admin-return-stat-card--rejected">
             <span class="admin-return-stat-card__icon"><i class="bi bi-x-circle-fill" aria-hidden="true"></i></span>
-            <span class="admin-return-stat-card__label">Đã từ chối</span>
+            <span class="admin-return-stat-card__label">Đã từ chối hoàn hàng</span>
             <strong class="admin-return-stat-card__value"><?= (int) ($stats['rejected'] ?? 0) ?></strong>
         </div>
     </div>
@@ -74,10 +74,10 @@ $statusLabels = [
                     <div class="admin-search-field admin-search-field--filter">
                         <select name="status" class="admin-form-input admin-select-filter" aria-label="Lọc theo trạng thái yêu cầu">
                             <option value="" <?= $status === '' ? 'selected' : '' ?>>Tất cả yêu cầu</option>
-                            <option value="return_request" <?= $status === 'return_request' ? 'selected' : '' ?>>Chờ xử lý</option>
-                            <option value="return_accepted" <?= $status === 'return_accepted' ? 'selected' : '' ?>>Đã chấp nhận</option>
-                            <option value="return_rejected" <?= $status === 'return_rejected' ? 'selected' : '' ?>>Đã từ chối</option>
-                            <option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Đã hoàn tất</option>
+                            <option value="return_request" <?= $status === 'return_request' ? 'selected' : '' ?>>Chờ xử lý hoàn hàng</option>
+                            <option value="return_accepted" <?= $status === 'return_accepted' ? 'selected' : '' ?>>Đã chấp nhận hoàn hàng</option>
+                            <option value="return_rejected" <?= $status === 'return_rejected' ? 'selected' : '' ?>>Đã từ chối hoàn hàng</option>
+                            <option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Hoàn tất hoàn hàng</option>
                         </select>
                     </div>
 

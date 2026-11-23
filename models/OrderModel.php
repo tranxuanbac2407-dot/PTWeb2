@@ -585,6 +585,28 @@ class OrderModel extends BaseModel
         }
     }
 
+    public function completeReturn($orderId)
+    {
+        $orderId = (int) $orderId;
+        if ($orderId <= 0) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . ' '
+                 . 'SET order_status = :status '
+                 . 'WHERE order_id = :id AND order_status = \'return_accepted\'';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':status', 'returned');
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->execute();
+
+            return $statement->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
     /**
      * Cập nhật trạng thái thanh toán của đơn hàng (unpaid, paid, refunded).
      *

@@ -21,10 +21,10 @@ $reason       = trim((string) ($order['return_reason'] ?? ''));
 $returnImage  = trim((string) ($order['return_image'] ?? ''));
 
 $statusLabels = [
-    'return_request'  => ['text' => 'Chờ xử lý',    'icon' => 'bi-hourglass-split',   'class' => 'admin-return-badge--pending'],
-    'return_accepted' => ['text' => 'Đã chấp nhận', 'icon' => 'bi-check-circle-fill', 'class' => 'admin-return-badge--accepted'],
-    'return_rejected' => ['text' => 'Đã từ chối',   'icon' => 'bi-x-circle-fill',     'class' => 'admin-return-badge--rejected'],
-    'returned'        => ['text' => 'Đã hoàn tất',  'icon' => 'bi-arrow-return-left', 'class' => 'admin-return-badge--completed'],
+    'return_request'  => ['text' => 'Chờ xử lý hoàn hàng', 'icon' => 'bi-hourglass-split',   'class' => 'admin-return-badge--pending'],
+    'return_accepted' => ['text' => 'Đã chấp nhận hoàn hàng', 'icon' => 'bi-check-circle-fill', 'class' => 'admin-return-badge--accepted'],
+    'return_rejected' => ['text' => 'Đã từ chối hoàn hàng', 'icon' => 'bi-x-circle-fill',     'class' => 'admin-return-badge--rejected'],
+    'returned'        => ['text' => 'Hoàn tất hoàn hàng', 'icon' => 'bi-arrow-return-left',   'class' => 'admin-return-badge--completed'],
 ];
 $statusInfo = $statusLabels[$orderStatus] ?? ['text' => $orderStatus, 'icon' => 'bi-question-circle', 'class' => 'admin-return-badge--pending'];
 
@@ -142,11 +142,11 @@ $payStatusLabels = [
                             <?php if ($orderStatus === 'return_request'): ?>
                                 Yêu cầu đang chờ xử lý. Chấp nhận yêu cầu không đồng nghĩa với đã hoàn tiền.
                             <?php elseif ($orderStatus === 'return_accepted'): ?>
-                                Yêu cầu đã được chấp nhận. Trạng thái thanh toán chưa bị thay đổi; cần đối soát giao dịch hoàn tiền thực tế trước khi cập nhật.
+                                Yêu cầu đã được chấp nhận. Trạng thái thanh toán chưa bị thay đổi; hãy xác nhận đã nhận lại hàng và đối soát khoản tiền hoàn thực tế trước khi bấm "Xác nhận hoàn tất hoàn hàng".
                             <?php elseif ($orderStatus === 'return_rejected'): ?>
                                 Yêu cầu đã bị từ chối. Không thể duyệt lại yêu cầu này.
                             <?php else: ?>
-                                Yêu cầu đã ở trạng thái hoàn tất theo dữ liệu hiện có.
+                                Yêu cầu đã hoàn tất quy trình hoàn hàng theo dữ liệu hiện có.
                             <?php endif; ?>
                         </div>
                     </div>
@@ -167,6 +167,17 @@ $payStatusLabels = [
                                 <button type="submit" class="admin-btn admin-btn-outline-danger">
                                     <i class="bi bi-x-circle me-1" aria-hidden="true"></i>
                                     Từ chối yêu cầu
+                                </button>
+                            </form>
+                        </div>
+                    <?php elseif ($orderStatus === 'return_accepted'): ?>
+                        <div class="admin-return-actions">
+                            <form action="<?= BASE_URL ?>?action=admin-return-complete" method="post" onsubmit="return confirm('Bạn xác nhận đã nhận lại hàng từ khách và đã đối soát khoản tiền hoàn theo quy trình thực tế của cửa hàng?\n\nChỉ xác nhận khi các bước này đã hoàn tất. Hệ thống sẽ không tự động chuyển trạng thái thanh toán.');">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                <input type="hidden" name="order_id" value="<?= $orderId ?>">
+                                <button type="submit" class="admin-btn admin-btn-accent">
+                                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>
+                                    Xác nhận hoàn tất hoàn hàng
                                 </button>
                             </form>
                         </div>

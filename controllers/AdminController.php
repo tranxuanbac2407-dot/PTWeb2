@@ -835,6 +835,8 @@ class AdminController extends BaseController
      */
     public function orderUpdateStatus()
     {
+        $this->requireAdmin();
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('?action=admin-orders');
         }
@@ -846,10 +848,16 @@ class AdminController extends BaseController
 
         $id     = (int) ($_POST['order_id'] ?? 0);
         $status = trim($_POST['order_status'] ?? '');
+        $allowedStatuses = ['pending', 'processing', 'shipping', 'completed'];
 
         if ($id <= 0) {
             $this->setFlash('error', 'Mã đơn hàng không hợp lệ.');
             $this->redirect('?action=admin-orders');
+        }
+
+        if (!in_array($status, $allowedStatuses, true)) {
+            $this->setFlash('error', 'Trạng thái cập nhật không hợp lệ cho quy trình đơn hàng thông thường.');
+            $this->redirect('?action=admin-order-detail&id=' . $id);
         }
 
         $orderModel = new OrderModel();
@@ -857,6 +865,12 @@ class AdminController extends BaseController
         if (!$order) {
             $this->setFlash('error', 'Không tìm thấy đơn hàng #' . $id);
             $this->redirect('?action=admin-orders');
+        }
+
+        $currentStatus = (string) ($order['order_status'] ?? 'pending');
+        if (!in_array($currentStatus, $allowedStatuses, true)) {
+            $this->setFlash('error', 'Đơn hàng đang ở trạng thái đặc biệt. Vui lòng sử dụng khu vực Quản lý hoàn hàng hoặc liên hệ quản trị viên.');
+            $this->redirect('?action=admin-order-detail&id=' . $id);
         }
 
         $payMethod = (string) ($order['payment_method'] ?? 'cod');
@@ -1052,6 +1066,49 @@ class AdminController extends BaseController
             }
         } else {
             $this->setFlash('error', 'Không thể cập nhật yêu cầu hoàn hàng #' . $id . '. Vui lòng thử lại.');
+        }
+
+        $this->redirect('?action=admin-return-detail&id=' . $id);
+    }
+
+    public function returnComplete()
+    {
+        $this->requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('?action=admin-returns');
+        }
+
+        if (!$this->csrfValid()) {
+            $this->setFlash('error', 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.');
+            $this->redirect('?action=admin-returns');
+        }
+
+        $id = (int) ($_POST['order_id'] ?? 0);
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã yêu cầu hoàn hàng không hợp lệ.');
+            $this->redirect('?action=admin-returns');
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->getReturnRequestById($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Không tìm thấy yêu cầu hoàn hàng #' . $id);
+            $this->redirect('?action=admin-returns');
+        }
+
+        if (($order['order_status'] ?? '') !== 'return_accepted') {
+            $this->setFlash('error', 'Yêu cầu hoàn hàng #' . $id . ' không ở trạng thái đã chấp nhận.');
+            $this->redirect('?action=admin-return-detail&id=' . $id);
+        }
+
+        $success = $orderModel->completeReturn($id);
+
+        if ($success) {
+            $this->setFlash('success', 'Đã xác nhận hoàn tất hoàn hàng cho đơn #' . $id . '. Trạng thái thanh toán không thay đổi; vui lòng đảm bảo khoản hoàn tiền đã được đối soát theo quy trình thực tế.');
+        } else {
+            $this->setFlash('error', 'Không thể cập nhật hoàn tất hoàn hàng #' . $id . '. Vui lòng thử lại.');
         }
 
         $this->redirect('?action=admin-return-detail&id=' . $id);

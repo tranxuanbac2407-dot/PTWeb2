@@ -163,9 +163,9 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                     <div class="d-flex align-items-start">
                         <i class="bi bi-arrow-return-left fs-2 me-3 text-secondary flex-shrink-0"></i>
                         <div class="flex-grow-1">
-                            <h6 class="fw-bold mb-1 text-dark">Đơn hàng đã hoàn hàng thành công</h6>
+                            <h6 class="fw-bold mb-1 text-dark">Hoàn tất hoàn hàng</h6>
                             <p class="mb-1 small">Ghi chú: <?= htmlspecialchars($order['return_reason'] ?? 'Đã tiếp nhận hàng và hoàn tất xử lý.', ENT_QUOTES, 'UTF-8') ?></p>
-                            <small class="text-muted d-block">SPORTIX đã kiểm tra tem mác, hoàn tất lấy lại hàng và chuyển trả tiền hoàn cho quý khách.</small>
+                            <small class="text-muted d-block">SPORTIX đã kiểm tra tem mác, hoàn tất lấy lại hàng và đối soát khoản tiền hoàn theo quy trình thực tế.</small>
 
                             <?php if (!empty($order['return_image'])): ?>
                                 <div class="mt-3 pt-2 border-top border-secondary-subtle d-flex align-items-center gap-3">
