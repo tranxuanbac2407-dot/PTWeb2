@@ -6,18 +6,47 @@
  */
 
 $cart = $_SESSION['cart'] ?? [];
-$subtotal = 0;
-$totalQuantity = 0;
+$selectedKeys = $_SESSION['checkout_items'] ?? null;
+$selectedKeySet = [];
 
-foreach ($cart as $item) {
-    $qty = (int) ($item['quantity'] ?? 1);
-    $subtotal += ((float) ($item['price'] ?? 0)) * $qty;
-    $totalQuantity += $qty;
+if (is_array($selectedKeys)) {
+    foreach ($selectedKeys as $selectedKey) {
+        if (is_scalar($selectedKey) && isset($cart[(string) $selectedKey])) {
+            $selectedKeySet[(string) $selectedKey] = true;
+        }
+    }
 }
 
-$freeShippingThreshold = 500000;
-$shippingFee = ($subtotal > 0 && $subtotal < $freeShippingThreshold) ? 30000 : 0;
+if (empty($selectedKeySet)) {
+    foreach ($cart as $key => $item) {
+        $selectedKeySet[(string) $key] = true;
+    }
+}
+
+$subtotal = 0;
+$totalQuantity = 0;
+$selectedQuantity = 0;
+$selectedLineCount = 0;
+
+foreach ($cart as $key => $item) {
+    $qty = (int) ($item['quantity'] ?? 1);
+    $lineSubtotal = ((float) ($item['price'] ?? 0)) * $qty;
+    $totalQuantity += $qty;
+
+    if (isset($selectedKeySet[(string) $key])) {
+        $subtotal += $lineSubtotal;
+        $selectedQuantity += $qty;
+        $selectedLineCount++;
+    }
+}
+
+$freeShippingThreshold = get_free_shipping_threshold();
+$standardShippingFee = get_standard_shipping_fee();
+$shippingFee = calculate_shipping_fee($subtotal);
 $totalAmount = $subtotal + $shippingFee;
+$shippingRemaining = max(0, $freeShippingThreshold - $subtotal);
+$shippingProgress = min(100, round(($subtotal / $freeShippingThreshold) * 100));
+$isFreeShipping = $subtotal > 0 && $subtotal >= $freeShippingThreshold;
 
 $flashSuccess = $_SESSION['flash_success'] ?? null;
 $flashError   = $_SESSION['flash_error'] ?? null;
@@ -45,7 +74,7 @@ if (!function_exists('get_cart_color_hex')) {
 }
 ?>
 
-<div class="cart-page py-4">
+<div class="cart-page py-4" data-free-shipping-threshold="<?= (int) $freeShippingThreshold ?>" data-standard-shipping-fee="<?= (int) $standardShippingFee ?>">
     <div class="container">
 
         <!-- Breadcrumbs -->
@@ -91,31 +120,28 @@ if (!function_exists('get_cart_color_hex')) {
         </div>
 
         <?php if (!empty($cart)): ?>
-            <!-- Thanh thông báo Miễn phí vận chuyển -->
-            <?php if ($subtotal < $freeShippingThreshold): ?>
-                <div class="alert alert-warning d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 rounded-3 border-warning-subtle">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-truck text-warning fs-3 me-3"></i>
-                        <div>
-                            <span>Mua thêm <strong><?= number_format($freeShippingThreshold - $subtotal, 0, ',', '.') ?> đ</strong> để nhận ưu đãi <strong>MIỄN PHÍ VẬN CHUYỂN</strong> toàn quốc!</span>
-                            <div class="progress mt-2" style="height: 6px; width: 220px; background-color: #fde68a;">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: <?= min(100, round(($subtotal / $freeShippingThreshold) * 100)) ?>%"></div>
-                            </div>
+            <div id="cart-shipping-warning" class="alert alert-warning d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 rounded-3 border-warning-subtle <?= $isFreeShipping ? 'd-none' : '' ?>">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-truck text-warning fs-3 me-3"></i>
+                    <div>
+                        <span id="cart-shipping-empty-message" class="<?= $subtotal > 0 ? 'd-none' : '' ?>">Vui lòng chọn sản phẩm để xem ưu đãi <strong>MIỄN PHÍ VẬN CHUYỂN</strong> toàn quốc!</span>
+                        <span id="cart-shipping-remaining-message" class="<?= $subtotal > 0 ? '' : 'd-none' ?>">Mua thêm <strong><span id="cart-shipping-remaining"><?= number_format($shippingRemaining, 0, ',', '.') ?></span> đ</strong> để nhận ưu đãi <strong>MIỄN PHÍ VẬN CHUYỂN</strong> toàn quốc!</span>
+                        <div class="progress mt-2" style="height: 6px; width: 220px; background-color: #fde68a;">
+                            <div id="cart-shipping-progress" class="progress-bar bg-warning" role="progressbar" style="width: <?= $shippingProgress ?>%"></div>
                         </div>
                     </div>
-                    <a href="<?= BASE_URL ?>?action=products" class="btn btn-sm btn-dark fw-bold px-3">
-                        <i class="bi bi-plus-lg me-1"></i> Mua thêm ngay
-                    </a>
                 </div>
-            <?php else: ?>
-                <div class="alert alert-success d-flex align-items-center mb-4 rounded-3 border-success-subtle">
-                    <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
-                    <div>
-                        <strong class="d-block">Tuyệt vời! Bạn đủ điều kiện nhận MIỄN PHÍ VẬN CHUYỂN!</strong>
-                        <small class="text-muted">Đơn hàng của bạn đạt giá trị trên <?= number_format($freeShippingThreshold, 0, ',', '.') ?> đ.</small>
-                    </div>
+                <a href="<?= BASE_URL ?>?action=products" class="btn btn-sm btn-dark fw-bold px-3">
+                    <i class="bi bi-plus-lg me-1"></i> Mua thêm ngay
+                </a>
+            </div>
+            <div id="cart-shipping-success" class="alert alert-success d-flex align-items-center mb-4 rounded-3 border-success-subtle <?= $isFreeShipping ? '' : 'd-none' ?>">
+                <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
+                <div>
+                    <strong class="d-block">Tuyệt vời! Bạn đủ điều kiện nhận MIỄN PHÍ VẬN CHUYỂN!</strong>
+                    <small class="text-muted">Đơn hàng của bạn đạt giá trị từ <?= number_format($freeShippingThreshold, 0, ',', '.') ?> đ.</small>
                 </div>
-            <?php endif; ?>
+            </div>
 
             <div class="row g-4">
                 <!-- Danh sách sản phẩm trong giỏ -->
@@ -299,16 +325,16 @@ if (!function_exists('get_cart_color_hex')) {
                     <div class="order-summary-card sx-card p-4 shadow-sm position-sticky" style="top: 20px;">
                         <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom d-flex align-items-center justify-content-between">
                             <span><i class="bi bi-receipt me-2 text-accent"></i>Tóm tắt đơn hàng</span>
-                            <span class="badge bg-light text-dark border small fw-normal"><span data-cart-selected-count><?= $totalQuantity ?></span> sản phẩm</span>
+                            <span class="badge bg-light text-dark border small fw-normal"><span data-cart-selected-count><?= $selectedQuantity ?></span> sản phẩm</span>
                         </h3>
 
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">Số lượng đã chọn:</span>
-                            <span class="fw-bold"><span data-cart-selected-count><?= $totalQuantity ?></span> sản phẩm (<span data-cart-selected-lines><?= count($cart) ?></span> mục)</span>
+                            <span class="fw-bold"><span data-cart-selected-count><?= $selectedQuantity ?></span> sản phẩm (<span data-cart-selected-lines><?= $selectedLineCount ?></span> mục)</span>
                         </div>
 
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Tạm tính (<span data-cart-selected-lines><?= count($cart) ?></span> mục):</span>
+                            <span class="text-muted">Tạm tính (<span data-cart-selected-lines><?= $selectedLineCount ?></span> mục):</span>
                             <span class="fw-bold" id="cart-selected-subtotal"><?= number_format($subtotal, 0, ',', '.') ?> đ</span>
                         </div>
 
@@ -384,6 +410,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const totalEl = document.getElementById('cart-selected-total');
     const submitBtn = document.getElementById('cart-checkout-btn');
     const messageEl = document.getElementById('cart-selection-message');
+    const cartPage = document.querySelector('.cart-page');
+    const freeShippingThreshold = cartPage ? parseInt(cartPage.dataset.freeShippingThreshold || '500000', 10) : 500000;
+    const standardShippingFee = cartPage ? parseInt(cartPage.dataset.standardShippingFee || '30000', 10) : 30000;
+    const warningBanner = document.getElementById('cart-shipping-warning');
+    const successBanner = document.getElementById('cart-shipping-success');
+    const shippingEmptyMessage = document.getElementById('cart-shipping-empty-message');
+    const shippingRemainingMessage = document.getElementById('cart-shipping-remaining-message');
+    const shippingRemainingEl = document.getElementById('cart-shipping-remaining');
+    const shippingProgressEl = document.getElementById('cart-shipping-progress');
 
     function formatMoney(value) {
         return Math.round(value).toLocaleString('vi-VN');
@@ -408,11 +443,21 @@ document.addEventListener('DOMContentLoaded', function () {
             subtotal += parseFloat(checkbox.dataset.subtotal || '0') || 0;
         });
 
-        const shipping = subtotal > 0 && subtotal < 500000 ? 30000 : 0;
+        const isFreeShipping = subtotal > 0 && subtotal >= freeShippingThreshold;
+        const shipping = subtotal > 0 && subtotal < freeShippingThreshold ? standardShippingFee : 0;
         const total = subtotal + shipping;
 
         selectedCountEls.forEach(function (el) { el.textContent = String(quantity); });
         selectedLineEls.forEach(function (el) { el.textContent = String(selected.length); });
+
+        if (warningBanner) warningBanner.classList.toggle('d-none', isFreeShipping);
+        if (successBanner) successBanner.classList.toggle('d-none', !isFreeShipping);
+        if (shippingEmptyMessage) shippingEmptyMessage.classList.toggle('d-none', subtotal > 0);
+        if (shippingRemainingMessage) shippingRemainingMessage.classList.toggle('d-none', subtotal <= 0);
+        if (shippingRemainingEl) shippingRemainingEl.textContent = formatMoney(Math.max(0, freeShippingThreshold - subtotal));
+        if (shippingProgressEl) {
+            shippingProgressEl.style.width = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100)) + '%';
+        }
 
         if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal) + ' đ';
         if (shippingEl) {

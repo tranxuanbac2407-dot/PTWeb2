@@ -219,18 +219,11 @@ class HomeController extends BaseController
     {
         $cart = $_SESSION['cart'] ?? [];
         $csrfToken = $this->csrfToken();
-        $subtotal = 0;
         $totalQuantity = 0;
 
         foreach ($cart as $item) {
-            $qty = (int) ($item['quantity'] ?? 1);
-            $subtotal += ((float) ($item['price'] ?? 0)) * $qty;
-            $totalQuantity += $qty;
+            $totalQuantity += (int) ($item['quantity'] ?? 1);
         }
-
-        // Tính phí vận chuyển: Miễn phí nếu tạm tính >= 500k, ngược lại 30.000đ (0đ nếu giỏ rỗng)
-        $shippingFee = ($subtotal > 0 && $subtotal < 500000) ? 30000 : 0;
-        $totalAmount = $subtotal + $shippingFee;
 
         $title = 'Giỏ hàng của bạn (' . $totalQuantity . ' món) | SPORTIX';
         $view  = 'client/cart';
@@ -456,7 +449,7 @@ class HomeController extends BaseController
             $subtotal += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
         }
 
-        $shippingFee = ($subtotal > 0 && $subtotal < 500000) ? 30000 : 0;
+        $shippingFee = calculate_shipping_fee($subtotal);
         $totalAmount = $subtotal + $shippingFee;
 
         // Chuẩn bị địa chỉ kèm ghi chú nếu có

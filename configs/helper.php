@@ -7,6 +7,32 @@ if (!function_exists('is_valid_phone')) {
     }
 }
 
+if (!function_exists('get_standard_shipping_fee')) {
+    function get_standard_shipping_fee()
+    {
+        return 30000;
+    }
+}
+
+if (!function_exists('get_free_shipping_threshold')) {
+    function get_free_shipping_threshold()
+    {
+        return 500000;
+    }
+}
+
+if (!function_exists('calculate_shipping_fee')) {
+    function calculate_shipping_fee($subtotal)
+    {
+        $subtotal = (float) $subtotal;
+        if ($subtotal <= 0 || $subtotal >= get_free_shipping_threshold()) {
+            return 0;
+        }
+
+        return get_standard_shipping_fee();
+    }
+}
+
 if (!function_exists('debug')) {
     function debug($data)
     {
