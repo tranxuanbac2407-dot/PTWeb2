@@ -16,15 +16,20 @@ $totalAmount  = (float) ($order['total_amount'] ?? 0);
 $payMethod    = (string) ($order['payment_method'] ?? 'cod');
 $orderDate    = (string) ($order['order_date'] ?? '');
 $currStatus   = (string) ($order['order_status'] ?? 'pending');
+$normalStatuses = ['pending', 'processing', 'shipping', 'completed'];
+$isSpecialStatus = !in_array($currStatus, $normalStatuses, true);
+$hasReturnFlow = in_array($currStatus, ['return_request', 'return_accepted', 'return_rejected', 'returned'], true);
 
 $statusLabels = [
     'pending'        => ['text' => 'Chờ xử lý',          'icon' => 'bi-clock-history',           'class' => 'admin-order-pending'],
     'processing'     => ['text' => 'Đang xử lý',         'icon' => 'bi-gear-wide-connected',     'class' => 'admin-order-processing'],
     'shipping'       => ['text' => 'Đang giao hàng',     'icon' => 'bi-truck',                   'class' => 'admin-order-shipping'],
-    'completed'      => ['text' => 'Đã hoàn thành',      'icon' => 'bi-check-circle-fill',       'class' => 'admin-order-completed'],
+    'completed'      => ['text' => 'Giao thành công',    'icon' => 'bi-check-circle-fill',       'class' => 'admin-order-completed'],
     'cancelled'      => ['text' => 'Đã hủy',             'icon' => 'bi-x-circle-fill',           'class' => 'admin-order-cancelled'],
-    'return_request' => ['text' => 'Yêu cầu hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
-    'returned'       => ['text' => 'Đã hoàn hàng',       'icon' => 'bi-arrow-return-left',       'class' => 'admin-order-returned'],
+    'return_request'  => ['text' => 'Chờ xử lý hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
+    'return_accepted' => ['text' => 'Đã chấp nhận hoàn hàng', 'icon' => 'bi-check2-circle',      'class' => 'admin-order-return-accepted'],
+    'return_rejected' => ['text' => 'Đã từ chối hoàn hàng', 'icon' => 'bi-x-circle',             'class' => 'admin-order-return-rejected'],
+    'returned'        => ['text' => 'Hoàn tất hoàn hàng', 'icon' => 'bi-arrow-return-left',      'class' => 'admin-order-returned'],
 ];
 
 $currStatusInfo = $statusLabels[$currStatus] ?? ['text' => $currStatus, 'icon' => 'bi-question-circle', 'class' => 'admin-order-pending'];
@@ -166,38 +171,57 @@ $payMethodLabels = [
                         <h4 class="fs-6 fw-bold mb-2">
                             <i class="bi bi-arrow-repeat text-accent me-1"></i>Cập nhật trạng thái đơn hàng:
                         </h4>
-                        <form action="<?= BASE_URL ?>?action=admin-order-update-status" method="post" class="d-flex flex-wrap gap-2 align-items-center">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-                            <input type="hidden" name="order_id" value="<?= $orderId ?>">
-
-                            <select name="order_status" class="admin-form-input admin-select-filter" style="min-width: 200px;">
-                                <option value="pending" <?= $currStatus === 'pending' ? 'selected' : '' ?>>Chờ xử lý</option>
-                                <option value="processing" <?= $currStatus === 'processing' ? 'selected' : '' ?>>Đang xử lý</option>
-                                <?php if ($isOnlinePayment && !$isPaid): ?>
-                                    <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?> disabled>
-                                        Đang giao hàng (Cần TT thành công trước)
-                                    </option>
-                                <?php else: ?>
-                                    <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
+                        <?php if ($isSpecialStatus): ?>
+                            <div class="alert alert-warning mb-0 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="bi <?= htmlspecialchars($currStatusInfo['icon'], ENT_QUOTES, 'UTF-8') ?> me-1"></i>
+                                        Trạng thái hiện tại: <?= htmlspecialchars($currStatusInfo['text'], ENT_QUOTES, 'UTF-8') ?>
+                                    </div>
+                                    <div class="small mt-1">
+                                        Đơn hàng đang ở trạng thái đặc biệt, không thể cập nhật bằng dropdown thông thường.
+                                        <?php if ($hasReturnFlow): ?>
+                                            Vui lòng mở khu vực Quản lý hoàn hàng để xử lý.
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if ($hasReturnFlow): ?>
+                                    <a href="<?= BASE_URL ?>?action=admin-return-detail&amp;id=<?= $orderId ?>" class="admin-btn admin-btn-outline">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Mở Quản lý hoàn hàng
+                                    </a>
                                 <?php endif; ?>
-                                <option value="completed" <?= $currStatus === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
-                                <option value="cancelled" <?= $currStatus === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
-                                <option value="return_request" <?= $currStatus === 'return_request' ? 'selected' : '' ?>>Yêu cầu hoàn hàng</option>
-                                <option value="returned" <?= $currStatus === 'returned' ? 'selected' : '' ?>>Đã hoàn hàng</option>
-                            </select>
+                            </div>
+                        <?php else: ?>
+                            <form action="<?= BASE_URL ?>?action=admin-order-update-status" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                <input type="hidden" name="order_id" value="<?= $orderId ?>">
 
-                            <button type="submit" class="admin-btn admin-btn-accent">
-                                <i class="bi bi-check2-circle me-1"></i> Lưu trạng thái
-                            </button>
-                        </form>
-                        <?php if ($isOnlinePayment && !$isPaid): ?>
-                            <div class="form-text text-danger mt-1 small">
-                                <i class="bi bi-exclamation-circle me-1"></i>Đơn hàng online: Chỉ có thanh toán thành công thì mới giao hàng.
-                            </div>
-                        <?php elseif (!$isOnlinePayment): ?>
-                            <div class="form-text text-muted mt-1 small">
-                                <i class="bi bi-info-circle me-1"></i>Đơn hàng COD: Khách hàng thanh toán tiền mặt khi nhận hàng từ shipper.
-                            </div>
+                                <select name="order_status" class="admin-form-input admin-select-filter" style="min-width: 200px;">
+                                    <option value="pending" <?= $currStatus === 'pending' ? 'selected' : '' ?>>Chờ xử lý</option>
+                                    <option value="processing" <?= $currStatus === 'processing' ? 'selected' : '' ?>>Đang xử lý</option>
+                                    <?php if ($isOnlinePayment && !$isPaid): ?>
+                                        <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?> disabled>
+                                            Đang giao hàng (Cần TT thành công trước)
+                                        </option>
+                                    <?php else: ?>
+                                        <option value="shipping" <?= $currStatus === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
+                                    <?php endif; ?>
+                                    <option value="completed" <?= $currStatus === 'completed' ? 'selected' : '' ?>>Giao thành công</option>
+                                </select>
+
+                                <button type="submit" class="admin-btn admin-btn-accent">
+                                    <i class="bi bi-check2-circle me-1"></i> Lưu trạng thái
+                                </button>
+                            </form>
+                            <?php if ($isOnlinePayment && !$isPaid): ?>
+                                <div class="form-text text-danger mt-1 small">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Đơn hàng online: Chỉ có thanh toán thành công thì mới giao hàng.
+                                </div>
+                            <?php elseif (!$isOnlinePayment): ?>
+                                <div class="form-text text-muted mt-1 small">
+                                    <i class="bi bi-info-circle me-1"></i>Đơn hàng COD: Khách hàng thanh toán tiền mặt khi nhận hàng từ shipper.
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
 

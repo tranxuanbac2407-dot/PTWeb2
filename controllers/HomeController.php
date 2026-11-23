@@ -218,18 +218,12 @@ class HomeController extends BaseController
     public function cart()
     {
         $cart = $_SESSION['cart'] ?? [];
-        $subtotal = 0;
+        $csrfToken = $this->csrfToken();
         $totalQuantity = 0;
 
         foreach ($cart as $item) {
-            $qty = (int) ($item['quantity'] ?? 1);
-            $subtotal += ((float) ($item['price'] ?? 0)) * $qty;
-            $totalQuantity += $qty;
+            $totalQuantity += (int) ($item['quantity'] ?? 1);
         }
-
-        // Tính phí vận chuyển: Miễn phí nếu tạm tính >= 500k, ngược lại 30.000đ (0đ nếu giỏ rỗng)
-        $shippingFee = ($subtotal > 0 && $subtotal < 500000) ? 30000 : 0;
-        $totalAmount = $subtotal + $shippingFee;
 
         $title = 'Giỏ hàng của bạn (' . $totalQuantity . ' món) | SPORTIX';
         $view  = 'client/cart';
@@ -251,6 +245,7 @@ class HomeController extends BaseController
                 $_SESSION['flash_success'] = 'Đã cập nhật số lượng giỏ hàng!';
             } else {
                 unset($_SESSION['cart'][$cartKey]);
+                $this->forgetCheckoutKey($cartKey);
                 $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
             }
         }
@@ -277,6 +272,7 @@ class HomeController extends BaseController
             } else {
                 // Nếu giảm về 0 thì tự động xóa món hàng đó khỏi giỏ
                 unset($_SESSION['cart'][$cartKey]);
+                $this->forgetCheckoutKey($cartKey);
                 $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
             }
         }
@@ -293,6 +289,7 @@ class HomeController extends BaseController
         $cartKey = trim($_GET['key'] ?? '');
         if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
             unset($_SESSION['cart'][$cartKey]);
+            $this->forgetCheckoutKey($cartKey);
             $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
         }
 
@@ -306,11 +303,51 @@ class HomeController extends BaseController
     public function clearCart()
     {
         if (!empty($_SESSION['cart'])) {
-            unset($_SESSION['cart']);
+            unset($_SESSION['cart'], $_SESSION['checkout_items']);
             $_SESSION['flash_success'] = 'Đã xóa toàn bộ sản phẩm khỏi giỏ hàng!';
         }
 
         header('Location: ' . BASE_URL . '?action=cart');
+        exit;
+    }
+
+    public function prepareCheckout()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
+
+        if (!$this->csrfValid()) {
+            $_SESSION['flash_error'] = 'Phiên làm việc đã hết hạn, vui lòng quay lại giỏ hàng và chọn lại sản phẩm.';
+            header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
+
+        $cart = $_SESSION['cart'] ?? [];
+        $rawKeys = $_POST['cart_item_ids'] ?? $_POST['selected_keys'] ?? [];
+        if (!is_array($rawKeys)) {
+            $rawKeys = [$rawKeys];
+        }
+
+        $selectedKeys = $this->normalizeCheckoutKeys($rawKeys, $cart);
+        if (empty($selectedKeys)) {
+            $_SESSION['flash_error'] = 'Vui lòng chọn ít nhất một sản phẩm để tiến hành thanh toán.';
+            header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
+
+        $_SESSION['checkout_items'] = $selectedKeys;
+        [$selectedItems, $errors] = $this->resolveSelectedCartItems();
+
+        if (!empty($errors) || empty($selectedItems)) {
+            unset($_SESSION['checkout_items']);
+            $_SESSION['flash_error'] = $errors[0] ?? 'Sản phẩm đã chọn không còn hợp lệ. Vui lòng kiểm tra lại giỏ hàng.';
+            header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
+
+        header('Location: ' . BASE_URL . '?action=checkout');
         exit;
     }
 
@@ -322,11 +359,17 @@ class HomeController extends BaseController
     {
         $this->requireAuthenticatedUser('checkout');
 
-        $cart = $_SESSION['cart'] ?? [];
+        $selectedKeys = $_SESSION['checkout_items'] ?? [];
+        if (!is_array($selectedKeys) || empty($selectedKeys)) {
+            $_SESSION['flash_error'] = 'Vui lòng chọn sản phẩm trong giỏ hàng trước khi tiến hành thanh toán.';
+            header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
 
-        // Kiểm tra validation giỏ hàng: không được để trống khi đặt hàng
-        if (empty($cart)) {
-            $_SESSION['flash_error'] = 'Giỏ hàng của bạn đang trống! Vui lòng chọn sản phẩm trước khi tiến hành đặt hàng.';
+        [$cart, $errors] = $this->resolveSelectedCartItems();
+        if (!empty($errors) || empty($cart)) {
+            unset($_SESSION['checkout_items']);
+            $_SESSION['flash_error'] = $errors[0] ?? 'Sản phẩm đã chọn không còn hợp lệ. Vui lòng kiểm tra lại giỏ hàng.';
             header('Location: ' . BASE_URL . '?action=cart');
             exit;
         }
@@ -358,11 +401,17 @@ class HomeController extends BaseController
             exit;
         }
 
-        $cart = $_SESSION['cart'] ?? [];
+        $selectedKeys = $_SESSION['checkout_items'] ?? [];
+        if (!is_array($selectedKeys) || empty($selectedKeys)) {
+            $_SESSION['flash_error'] = 'Vui lòng chọn sản phẩm trong giỏ hàng trước khi tiến hành đặt hàng.';
+            header('Location: ' . BASE_URL . '?action=cart');
+            exit;
+        }
 
-        // Kiểm tra giỏ hàng không được để trống khi đặt hàng
-        if (empty($cart)) {
-            $_SESSION['flash_error'] = 'Giỏ hàng của bạn đang trống! Không thể tiến hành đặt hàng.';
+        [$cart, $errors] = $this->resolveSelectedCartItems();
+        if (!empty($errors) || empty($cart)) {
+            unset($_SESSION['checkout_items']);
+            $_SESSION['flash_error'] = $errors[0] ?? 'Sản phẩm đã chọn không còn hợp lệ. Vui lòng kiểm tra lại giỏ hàng.';
             header('Location: ' . BASE_URL . '?action=cart');
             exit;
         }
@@ -400,7 +449,7 @@ class HomeController extends BaseController
             $subtotal += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
         }
 
-        $shippingFee = ($subtotal > 0 && $subtotal < 500000) ? 30000 : 0;
+        $shippingFee = calculate_shipping_fee($subtotal);
         $totalAmount = $subtotal + $shippingFee;
 
         // Chuẩn bị địa chỉ kèm ghi chú nếu có
@@ -424,8 +473,10 @@ class HomeController extends BaseController
         $orderId = $orderModel->createOrder($orderData, $cart);
 
         if ($orderId > 0) {
-            // Tự động xóa sạch giỏ hàng trong session sau khi hệ thống tạo đơn thành công
-            unset($_SESSION['cart']);
+            foreach (array_keys($cart) as $cartKey) {
+                unset($_SESSION['cart'][$cartKey]);
+            }
+            unset($_SESSION['checkout_items']);
 
             header('Location: ' . BASE_URL . '?action=order-success&id=' . $orderId);
             exit;
@@ -644,6 +695,112 @@ class HomeController extends BaseController
 
         header('Location: ' . BASE_URL . '?action=order-detail&id=' . $orderId);
         exit;
+    }
+
+    private function normalizeCheckoutKeys(array $rawKeys, array $cart)
+    {
+        $keys = [];
+        foreach ($rawKeys as $rawKey) {
+            if (!is_scalar($rawKey)) {
+                continue;
+            }
+
+            $key = (string) $rawKey;
+            if (isset($cart[$key])) {
+                $keys[$key] = $key;
+            }
+        }
+
+        return array_values($keys);
+    }
+
+    private function resolveSelectedCartItems()
+    {
+        $cart = $_SESSION['cart'] ?? [];
+        $rawKeys = $_SESSION['checkout_items'] ?? [];
+
+        if (!is_array($rawKeys) || empty($rawKeys) || empty($cart)) {
+            return [[], []];
+        }
+
+        $productModel = new ProductModel();
+        $products = [];
+        $requiredStock = [];
+        $items = [];
+        $errors = [];
+
+        foreach ($this->normalizeCheckoutKeys($rawKeys, $cart) as $key) {
+            $sessionItem = $cart[$key];
+            $productId = (int) ($sessionItem['product_id'] ?? 0);
+            $quantity = (int) ($sessionItem['quantity'] ?? 1);
+
+            if ($productId <= 0 || $quantity <= 0) {
+                $errors[] = 'Một sản phẩm đã chọn trong giỏ hàng không còn hợp lệ.';
+                continue;
+            }
+
+            if (!array_key_exists($productId, $products)) {
+                $products[$productId] = $productModel->getById($productId);
+            }
+
+            $product = $products[$productId];
+            if (!$product) {
+                $errors[] = 'Sản phẩm "' . (string) ($sessionItem['name'] ?? 'Sản phẩm') . '" không còn tồn tại. Vui lòng cập nhật giỏ hàng.';
+                continue;
+            }
+
+            $requiredStock[$productId] = ($requiredStock[$productId] ?? 0) + $quantity;
+
+            $item = $sessionItem;
+            $item['cart_key'] = $key;
+            $item['cart_item_id'] = $key;
+            $item['product_id'] = $productId;
+            $item['quantity'] = $quantity;
+            $item['price'] = (float) ($product['price'] ?? 0);
+            $item['name'] = (string) ($product['product_name'] ?? ($sessionItem['name'] ?? 'Sản phẩm'));
+            $item['image'] = (string) ($product['image'] ?? '');
+            $item['category_name'] = (string) ($product['categories_name'] ?? '');
+            $items[$key] = $item;
+        }
+
+        foreach ($requiredStock as $productId => $neededQuantity) {
+            $availableQuantity = (int) ($products[$productId]['stock_quantity'] ?? 0);
+            if ($neededQuantity > $availableQuantity) {
+                $errors[] = 'Sản phẩm "' . (string) ($products[$productId]['product_name'] ?? 'Sản phẩm') . '" chỉ còn ' . $availableQuantity . ' cái, không đủ cho số lượng ' . $neededQuantity . ' đã chọn.';
+            }
+        }
+
+        $orderedItems = [];
+        foreach ($cart as $key => $sessionItem) {
+            if (isset($items[$key])) {
+                $orderedItems[$key] = $items[$key];
+            }
+        }
+
+        return [$orderedItems, array_values(array_unique($errors))];
+    }
+
+    private function forgetCheckoutKey($cartKey)
+    {
+        if (!isset($_SESSION['checkout_items']) || !is_array($_SESSION['checkout_items'])) {
+            unset($_SESSION['checkout_items']);
+            return;
+        }
+
+        $cartKey = (string) $cartKey;
+        $remainingKeys = [];
+        foreach ($_SESSION['checkout_items'] as $key) {
+            if (is_scalar($key) && (string) $key !== $cartKey) {
+                $remainingKeys[] = (string) $key;
+            }
+        }
+
+        if (empty($remainingKeys)) {
+            unset($_SESSION['checkout_items']);
+            return;
+        }
+
+        $_SESSION['checkout_items'] = $remainingKeys;
     }
 
     public function notFound()

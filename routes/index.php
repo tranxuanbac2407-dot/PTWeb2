@@ -14,6 +14,7 @@ match ($action) {
     'cart-qty'       => (new HomeController)->changeCartQty(),
     'cart-remove'    => (new HomeController)->removeFromCart(),
     'cart-clear'     => (new HomeController)->clearCart(),
+    'cart-checkout'  => (new HomeController)->prepareCheckout(),
     'checkout'       => (new HomeController)->checkout(),
     'place-order'    => (new HomeController)->placeOrder(),
     'order-success'  => (new HomeController)->orderSuccess(),
@@ -41,6 +42,11 @@ match ($action) {
     'admin-order-detail'        => (new AdminController)->orderDetail(),
     'admin-order-update-status' => (new AdminController)->orderUpdateStatus(),
     'admin-order-confirm-payment' => (new AdminController)->orderConfirmPayment(),
+    'admin-returns'               => (new AdminController)->returns(),
+    'admin-return-detail'         => (new AdminController)->returnDetail(),
+    'admin-return-accept'         => (new AdminController)->returnAccept(),
+    'admin-return-reject'         => (new AdminController)->returnReject(),
+    'admin-return-complete'       => (new AdminController)->returnComplete(),
 
     default    => (new HomeController)->notFound(),
 };

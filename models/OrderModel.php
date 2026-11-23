@@ -219,14 +219,12 @@ class OrderModel extends BaseModel
                 return 0;
             }
 
-            // Insert từng món hàng vào order_items & tự động cập nhật trừ tồn kho
             $itemSql = 'INSERT INTO order_items '
                      . '(order_id, product_id, product_name, size, color, unit_price, quantity, subtotal) '
                      . 'VALUES (:order_id, :product_id, :product_name, :size, :color, :unit_price, :quantity, :subtotal)';
             $itemStmt = $this->pdo->prepare($itemSql);
 
-            // Câu lệnh tự động cập nhật giảm số lượng tồn kho trong kho sản phẩm
-            $stockSql = 'UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - :qty) WHERE product_id = :p_id';
+            $stockSql = 'UPDATE products SET stock_quantity = stock_quantity - :qty WHERE product_id = :p_id AND stock_quantity >= :qty';
             $stockStmt = $this->pdo->prepare($stockSql);
 
             foreach ($cartItems as $item) {
@@ -234,6 +232,10 @@ class OrderModel extends BaseModel
                 $qty       = (int) ($item['quantity'] ?? 1);
                 $subtotal  = $unitPrice * $qty;
                 $pId       = (int) ($item['product_id'] ?? 0);
+
+                if ($pId <= 0 || $qty <= 0 || $unitPrice < 0) {
+                    throw new RuntimeException('Dữ liệu sản phẩm trong giỏ hàng không hợp lệ.');
+                }
 
                 $itemStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
                 $itemStmt->bindValue(':product_id', $pId, PDO::PARAM_INT);
@@ -245,29 +247,16 @@ class OrderModel extends BaseModel
                 $itemStmt->bindValue(':subtotal', $subtotal);
                 $itemStmt->execute();
 
-                // Tự động trừ tồn kho nếu có product_id hợp lệ
-                if ($pId > 0) {
-                    try {
-                        $stockStmt->bindValue(':qty', $qty, PDO::PARAM_INT);
-                        $stockStmt->bindValue(':p_id', $pId, PDO::PARAM_INT);
-                        $stockStmt->execute();
-                    } catch (Throwable $stockEx) {
-                        // Bỏ qua nếu bảng products chưa có cột stock_quantity hoặc không hỗ trợ
-                    }
+                $stockStmt->bindValue(':qty', $qty, PDO::PARAM_INT);
+                $stockStmt->bindValue(':p_id', $pId, PDO::PARAM_INT);
+                $stockStmt->execute();
+
+                if ($stockStmt->rowCount() < 1) {
+                    throw new RuntimeException('Sản phẩm "' . (string) ($item['name'] ?? 'Sản phẩm') . '" không đủ tồn kho.');
                 }
             }
 
-            // Tự động dọn dẹp giỏ hàng trong database nếu người dùng đã đăng nhập
-            if ($userId > 0) {
-                try {
-                    $clearCartSql = 'DELETE ci FROM cart_items ci INNER JOIN carts c ON ci.cart_id = c.cart_id WHERE c.user_id = :u_id';
-                    $clearCartStmt = $this->pdo->prepare($clearCartSql);
-                    $clearCartStmt->bindValue(':u_id', $userId, PDO::PARAM_INT);
-                    $clearCartStmt->execute();
-                } catch (Throwable $cartEx) {
-                    // Bỏ qua nếu cấu trúc giỏ hàng database chưa khởi tạo
-                }
-            }
+            $this->removePurchasedDbCartItems($userId, $cartItems);
 
             $this->pdo->commit();
             return $orderId;
@@ -277,6 +266,71 @@ class OrderModel extends BaseModel
             }
 
             return 0;
+        }
+    }
+
+    private function removePurchasedDbCartItems($userId, array $cartItems)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0 || empty($cartItems)) {
+            return;
+        }
+
+        try {
+            $sql = 'SELECT ci.cart_item_id, ci.product_id, ci.size, ci.color, ci.quantity '
+                 . 'FROM cart_items ci INNER JOIN carts c ON ci.cart_id = c.cart_id '
+                 . 'WHERE c.user_id = :u_id';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':u_id', $userId, PDO::PARAM_INT);
+            $statement->execute();
+            $dbItems = $statement->fetchAll();
+        } catch (Throwable $e) {
+            return;
+        }
+
+        $needed = [];
+        foreach ($cartItems as $item) {
+            $productId = (int) ($item['product_id'] ?? 0);
+            $quantity = (int) ($item['quantity'] ?? 0);
+            if ($productId <= 0 || $quantity <= 0) {
+                continue;
+            }
+
+            $signature = $productId . '|' . trim((string) ($item['size'] ?? '')) . '|' . trim((string) ($item['color'] ?? ''));
+            $needed[$signature] = ($needed[$signature] ?? 0) + $quantity;
+        }
+
+        if (empty($needed) || empty($dbItems)) {
+            return;
+        }
+
+        try {
+            foreach ($dbItems as $dbItem) {
+                $signature = (int) $dbItem['product_id'] . '|' . trim((string) ($dbItem['size'] ?? '')) . '|' . trim((string) ($dbItem['color'] ?? ''));
+                if (!isset($needed[$signature]) || $needed[$signature] <= 0) {
+                    continue;
+                }
+
+                $dbQuantity = (int) ($dbItem['quantity'] ?? 0);
+                $removeQuantity = min($dbQuantity, $needed[$signature]);
+                if ($removeQuantity <= 0) {
+                    continue;
+                }
+
+                if ($dbQuantity > $removeQuantity) {
+                    $update = $this->pdo->prepare('UPDATE cart_items SET quantity = quantity - :qty WHERE cart_item_id = :id');
+                    $update->bindValue(':qty', $removeQuantity, PDO::PARAM_INT);
+                    $update->bindValue(':id', (int) $dbItem['cart_item_id'], PDO::PARAM_INT);
+                    $update->execute();
+                } else {
+                    $delete = $this->pdo->prepare('DELETE FROM cart_items WHERE cart_item_id = :id');
+                    $delete->bindValue(':id', (int) $dbItem['cart_item_id'], PDO::PARAM_INT);
+                    $delete->execute();
+                }
+
+                $needed[$signature] -= $removeQuantity;
+            }
+        } catch (Throwable $e) {
         }
     }
 
@@ -322,6 +376,8 @@ class OrderModel extends BaseModel
             'completed',
             'cancelled',
             'return_request',
+            'return_accepted',
+            'return_rejected',
             'returned',
         ];
         if (!in_array($status, $allowedStatuses, true)) {
@@ -411,6 +467,143 @@ class OrderModel extends BaseModel
             } catch (Throwable $e2) {
                 return false;
             }
+        }
+    }
+
+    private function returnStatuses()
+    {
+        return ['return_request', 'return_accepted', 'return_rejected', 'returned'];
+    }
+
+    private function returnRequestCondition()
+    {
+        return "(o.order_status IN ('return_request', 'return_accepted', 'return_rejected', 'returned') "
+             . "OR (o.return_reason IS NOT NULL AND TRIM(o.return_reason) <> ''))";
+    }
+
+    public function getReturnRequests($keyword = null, $status = null)
+    {
+        $sql = 'SELECT o.*, u.username, u.email, COALESCE(NULLIF(u.full_name, \'\'), o.receiver_name) AS customer_name '
+             . 'FROM ' . $this->table . ' o '
+             . 'LEFT JOIN users u ON o.user_id = u.id '
+             . 'WHERE ' . $this->returnRequestCondition() . ' ';
+
+        $params = [];
+        $keyword = is_string($keyword) ? trim($keyword) : '';
+
+        if ($keyword !== '') {
+            $sql .= 'AND (o.order_id = :order_id_exact OR o.receiver_name LIKE :keyword OR o.phone LIKE :keyword OR u.username LIKE :keyword OR u.full_name LIKE :keyword) ';
+            $params[':order_id_exact'] = (is_numeric($keyword) && !is_valid_phone($keyword)) ? (int) $keyword : -1;
+            $params[':keyword'] = '%' . $keyword . '%';
+        }
+
+        $status = is_string($status) ? trim($status) : '';
+        if (in_array($status, $this->returnStatuses(), true)) {
+            $sql .= 'AND o.order_status = :status ';
+            $params[':status'] = $status;
+        }
+
+        $sql .= 'ORDER BY FIELD(o.order_status, \'return_request\', \'return_accepted\', \'return_rejected\', \'returned\'), o.order_id DESC';
+
+        try {
+            $statement = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $statement->bindValue($key, $value);
+            }
+            $statement->execute();
+
+            return array_map([$this, 'normalizeOrder'], $statement->fetchAll());
+        } catch (Throwable $e) {
+            throw new RuntimeException('Không thể tải danh sách yêu cầu hoàn hàng từ cơ sở dữ liệu.', 0, $e);
+        }
+    }
+
+    public function getReturnStats()
+    {
+        $sql = 'SELECT COUNT(*) AS total, '
+             . 'SUM(CASE WHEN o.order_status = \'return_request\' THEN 1 ELSE 0 END) AS pending, '
+             . 'SUM(CASE WHEN o.order_status = \'return_accepted\' THEN 1 ELSE 0 END) AS accepted, '
+             . 'SUM(CASE WHEN o.order_status = \'return_rejected\' THEN 1 ELSE 0 END) AS rejected '
+             . 'FROM ' . $this->table . ' o '
+             . 'WHERE ' . $this->returnRequestCondition();
+
+        try {
+            $row = $this->pdo->query($sql)->fetch();
+        } catch (Throwable $e) {
+            $row = null;
+        }
+
+        return [
+            'total'    => (int) ($row['total'] ?? 0),
+            'pending'  => (int) ($row['pending'] ?? 0),
+            'accepted' => (int) ($row['accepted'] ?? 0),
+            'rejected' => (int) ($row['rejected'] ?? 0),
+        ];
+    }
+
+    public function getReturnRequestById($orderId)
+    {
+        $order = $this->getById($orderId);
+        if (!$order) {
+            return null;
+        }
+
+        $status    = (string) ($order['order_status'] ?? '');
+        $hasReason = trim((string) ($order['return_reason'] ?? '')) !== '';
+
+        if (!in_array($status, $this->returnStatuses(), true) && !$hasReason) {
+            return null;
+        }
+
+        return $order;
+    }
+
+    public function updateReturnRequestDecision($orderId, $decision)
+    {
+        $orderId = (int) $orderId;
+        $map = [
+            'accept' => 'return_accepted',
+            'reject' => 'return_rejected',
+        ];
+
+        if ($orderId <= 0 || !isset($map[$decision])) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . ' '
+                 . 'SET order_status = :status '
+                 . 'WHERE order_id = :id AND order_status = \'return_request\'';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':status', $map[$decision]);
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->execute();
+
+            return $statement->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    public function completeReturn($orderId)
+    {
+        $orderId = (int) $orderId;
+        if ($orderId <= 0) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . ' '
+                 . 'SET order_status = :status '
+                 . 'WHERE order_id = :id AND order_status = \'return_accepted\'';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':status', 'returned');
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->execute();
+
+            return $statement->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
         }
     }
 

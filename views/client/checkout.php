@@ -4,7 +4,7 @@
  * Giao diện đặt hàng và thanh toán SPORTIX.
  */
 
-$cart = $_SESSION['cart'] ?? [];
+$cart = $cart ?? [];
 $currentUser = $_SESSION['user'] ?? null;
 
 $subtotal = 0;
@@ -12,8 +12,8 @@ foreach ($cart as $item) {
     $subtotal += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 1));
 }
 
-$freeShippingThreshold = 500000;
-$shippingFee = ($subtotal > 0 && $subtotal < $freeShippingThreshold) ? 30000 : 0;
+$freeShippingThreshold = get_free_shipping_threshold();
+$shippingFee = calculate_shipping_fee($subtotal);
 $totalAmount = $subtotal + $shippingFee;
 
 $flashError = $_SESSION['flash_error'] ?? null;

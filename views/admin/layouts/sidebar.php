@@ -37,6 +37,12 @@ $manageItems = [
         'icon'  => 'bi-receipt',
         'href'  => BASE_URL . '?action=admin-orders',
     ],
+    [
+        'key'   => 'returns',
+        'label' => 'Quản lý hoàn hàng',
+        'icon'  => 'bi-arrow-counterclockwise',
+        'href'  => BASE_URL . '?action=admin-returns',
+    ],
 ];
 ?>
 

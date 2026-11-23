@@ -31,7 +31,7 @@ function get_order_success_status_badge($status) {
         case 'shipping':
             return '<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 rounded-pill"><i class="bi bi-truck me-1"></i>Đang giao hàng</span>';
         case 'completed':
-            return '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Đã hoàn thành</span>';
+            return '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Giao thành công</span>';
         case 'cancelled':
             return '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill"><i class="bi bi-x-circle me-1"></i>Đã hủy</span>';
         default:

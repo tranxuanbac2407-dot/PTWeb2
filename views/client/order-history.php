@@ -29,8 +29,12 @@ function render_order_status_badge($status, $payMethod = 'cod', $payStatus = 'un
             return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill"><i class="bi bi-box-seam me-1"></i> Đang chuẩn bị hàng</span>';
         case 'return_request':
             return '<span class="badge bg-warning-subtle text-dark border border-warning-subtle px-3 py-2 rounded-pill"><i class="bi bi-arrow-counterclockwise me-1 text-warning"></i> Chờ xử lý hoàn hàng</span>';
+        case 'return_accepted':
+            return '<span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2 rounded-pill"><i class="bi bi-check2-circle me-1"></i> Đã chấp nhận hoàn hàng</span>';
+        case 'return_rejected':
+            return '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill"><i class="bi bi-x-circle me-1"></i> Đã từ chối hoàn hàng</span>';
         case 'returned':
-            return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill"><i class="bi bi-arrow-return-left me-1"></i> Đã hoàn hàng</span>';
+            return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill"><i class="bi bi-arrow-return-left me-1"></i> Hoàn tất hoàn hàng</span>';
         case 'cancelled':
             return '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill"><i class="bi bi-x-circle me-1"></i> Đã hủy</span>';
         case 'pending':
