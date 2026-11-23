@@ -12,6 +12,11 @@ $total     = (float) ($order['total_amount'] ?? 0);
 $status    = $order['order_status'] ?? 'pending';
 $orderDate = !empty($order['order_date']) ? date('d/m/Y - H:i:s', strtotime($order['order_date'])) : 'Không xác định';
 
+$isOnlineMethod = (($order['payment_method'] ?? 'cod') !== 'cod');
+// Đơn online coi như đã thanh toán nếu payment_status là paid, HOẶC admin đã chuyển sang shipping/completed
+$isPaidStatus   = (($order['payment_status'] ?? 'unpaid') === 'paid')
+               || ($isOnlineMethod && in_array($status, ['shipping', 'completed'], true));
+
 // Helper tên phương thức thanh toán
 function get_detail_payment_name($method) {
     switch ($method) {
@@ -228,13 +233,6 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         </button>
                     </div>
                 <?php endif; ?>
-
-                <?php
-                    $isOnlineMethod = (($order['payment_method'] ?? 'cod') !== 'cod');
-                    // Đơn online coi như đã thanh toán nếu payment_status là paid, HOẶC admin đã chuyển sang shipping/completed
-                    $isPaidStatus   = (($order['payment_status'] ?? 'unpaid') === 'paid')
-                                   || ($isOnlineMethod && in_array($status, ['shipping', 'completed'], true));
-                ?>
 
                 <?php if ($isOnlineMethod && $isPaidStatus && $status === 'shipping'): ?>
                     <!-- Banner nổi bật: Đã thanh toán thành công và đang giao hàng -->
