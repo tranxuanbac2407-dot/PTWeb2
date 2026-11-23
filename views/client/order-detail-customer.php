@@ -122,6 +122,37 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         </div>
                     </div>
                 </div>
+            <?php elseif ($status === 'return_accepted'): ?>
+                <div class="alert alert-info mb-0 p-3 rounded-3 shadow-sm border border-info-subtle">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-check2-circle fs-2 me-3 text-info flex-shrink-0"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã được chấp nhận</h6>
+                            <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                            <small class="text-muted d-block">Nhân viên SPORTIX sẽ liên hệ để điều phối kiểm tra hàng và đối soát khoản thanh toán. Trạng thái thanh toán của đơn chưa tự động đổi.</small>
+
+                            <?php if (!empty($order['return_image'])): ?>
+                                <div class="mt-3 pt-2 border-top border-info-subtle d-flex align-items-center gap-3">
+                                    <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-info me-1"></i>Ảnh hàng khi gửi yêu cầu:</span>
+                                    <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
+                                        <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác khi hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php elseif ($status === 'return_rejected'): ?>
+                <div class="alert alert-danger mb-0 p-3 rounded-3 shadow-sm border border-danger-subtle">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-x-circle-fill fs-2 me-3 text-danger flex-shrink-0"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã bị từ chối</h6>
+                            <p class="mb-1 small">Lý do đã gửi: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                            <small class="text-muted d-block">Yêu cầu hoàn hàng của bạn không được chấp nhận. Nếu cần hỗ trợ thêm, vui lòng liên hệ SPORTIX qua hotline 1900 8888.</small>
+                        </div>
+                    </div>
+                </div>
             <?php elseif ($status === 'returned'): ?>
                 <div class="alert alert-secondary mb-0 p-3 rounded-3 shadow-sm border border-secondary-subtle">
                     <div class="d-flex align-items-start">

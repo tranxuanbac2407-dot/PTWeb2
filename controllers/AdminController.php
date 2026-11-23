@@ -926,6 +926,137 @@ class AdminController extends BaseController
         $this->redirect('?action=admin-order-detail&id=' . $id);
     }
 
+    public function returns()
+    {
+        $orderModel = new OrderModel();
+
+        $keywordInput = $_GET['keyword'] ?? '';
+        $keyword = is_string($keywordInput) ? trim($keywordInput) : '';
+        $statusInput = $_GET['status'] ?? '';
+        $status = is_string($statusInput) ? trim($statusInput) : '';
+
+        if (!in_array($status, ['', 'return_request', 'return_accepted', 'return_rejected', 'returned'], true)) {
+            $status = '';
+        }
+
+        $requests = [];
+        $stats = ['total' => 0, 'pending' => 0, 'accepted' => 0, 'rejected' => 0];
+        $flashSuccess = $this->getFlash('success');
+        $flashError = $this->getFlash('error');
+
+        try {
+            $requests = $orderModel->getReturnRequests($keyword, $status);
+            $stats = $orderModel->getReturnStats();
+        } catch (Throwable $e) {
+            $flashError = 'Không thể tải danh sách yêu cầu hoàn hàng: ' . $e->getMessage();
+        }
+
+        $this->renderAdminPage(
+            'returns/index',
+            'Quản lý hoàn hàng | Quản trị SPORTIX',
+            'Quản lý hoàn hàng',
+            'Theo dõi và xử lý các yêu cầu hoàn hàng của khách hàng.',
+            'returns',
+            [
+                'requests'     => $requests,
+                'stats'        => $stats,
+                'keyword'      => $keyword,
+                'status'       => $status,
+                'flashSuccess' => $flashSuccess,
+                'flashError'   => $flashError,
+            ]
+        );
+    }
+
+    public function returnDetail()
+    {
+        $orderModel = new OrderModel();
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã yêu cầu hoàn hàng không hợp lệ.');
+            $this->redirect('?action=admin-returns');
+        }
+
+        $order = $orderModel->getReturnRequestById($id);
+        if (!$order) {
+            $this->setFlash('error', 'Không tìm thấy yêu cầu hoàn hàng #' . $id);
+            $this->redirect('?action=admin-returns');
+        }
+
+        $this->renderAdminPage(
+            'returns/detail',
+            'Chi tiết yêu cầu hoàn hàng #' . $id . ' | Quản trị SPORTIX',
+            'Chi tiết yêu cầu hoàn hàng #' . $id,
+            'Thông tin đơn hàng, khách hàng và yêu cầu hoàn hàng.',
+            'returns',
+            [
+                'order'        => $order,
+                'orderItems'   => $orderModel->getOrderItems($id),
+                'csrfToken'    => $this->csrfToken(),
+                'flashSuccess' => $this->getFlash('success'),
+                'flashError'   => $this->getFlash('error'),
+            ]
+        );
+    }
+
+    public function returnAccept()
+    {
+        $this->processReturnDecision('accept');
+    }
+
+    public function returnReject()
+    {
+        $this->processReturnDecision('reject');
+    }
+
+    private function processReturnDecision($decision)
+    {
+        $this->requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('?action=admin-returns');
+        }
+
+        if (!$this->csrfValid()) {
+            $this->setFlash('error', 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.');
+            $this->redirect('?action=admin-returns');
+        }
+
+        $id = (int) ($_POST['order_id'] ?? 0);
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã yêu cầu hoàn hàng không hợp lệ.');
+            $this->redirect('?action=admin-returns');
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->getReturnRequestById($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Không tìm thấy yêu cầu hoàn hàng #' . $id);
+            $this->redirect('?action=admin-returns');
+        }
+
+        if (($order['order_status'] ?? '') !== 'return_request') {
+            $this->setFlash('error', 'Yêu cầu hoàn hàng #' . $id . ' đã được xử lý.');
+            $this->redirect('?action=admin-return-detail&id=' . $id);
+        }
+
+        $success = $orderModel->updateReturnRequestDecision($id, $decision);
+
+        if ($success) {
+            if ($decision === 'accept') {
+                $this->setFlash('success', 'Đã chấp nhận yêu cầu hoàn hàng cho đơn #' . $id . '. Trạng thái thanh toán không thay đổi; vui lòng đối soát giao dịch hoàn tiền thực tế trước khi cập nhật.');
+            } else {
+                $this->setFlash('success', 'Đã từ chối yêu cầu hoàn hàng cho đơn #' . $id . '.');
+            }
+        } else {
+            $this->setFlash('error', 'Không thể cập nhật yêu cầu hoàn hàng #' . $id . '. Vui lòng thử lại.');
+        }
+
+        $this->redirect('?action=admin-return-detail&id=' . $id);
+    }
+
     /**
      * Kiểm tra quyền Admin rồi hiển thị một trang trong Admin Layout.
      *

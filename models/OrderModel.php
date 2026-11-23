@@ -322,6 +322,8 @@ class OrderModel extends BaseModel
             'completed',
             'cancelled',
             'return_request',
+            'return_accepted',
+            'return_rejected',
             'returned',
         ];
         if (!in_array($status, $allowedStatuses, true)) {
@@ -411,6 +413,121 @@ class OrderModel extends BaseModel
             } catch (Throwable $e2) {
                 return false;
             }
+        }
+    }
+
+    private function returnStatuses()
+    {
+        return ['return_request', 'return_accepted', 'return_rejected', 'returned'];
+    }
+
+    private function returnRequestCondition()
+    {
+        return "(o.order_status IN ('return_request', 'return_accepted', 'return_rejected', 'returned') "
+             . "OR (o.return_reason IS NOT NULL AND TRIM(o.return_reason) <> ''))";
+    }
+
+    public function getReturnRequests($keyword = null, $status = null)
+    {
+        $sql = 'SELECT o.*, u.username, u.email, COALESCE(NULLIF(u.full_name, \'\'), o.receiver_name) AS customer_name '
+             . 'FROM ' . $this->table . ' o '
+             . 'LEFT JOIN users u ON o.user_id = u.id '
+             . 'WHERE ' . $this->returnRequestCondition() . ' ';
+
+        $params = [];
+        $keyword = is_string($keyword) ? trim($keyword) : '';
+
+        if ($keyword !== '') {
+            $sql .= 'AND (o.order_id = :order_id_exact OR o.receiver_name LIKE :keyword OR o.phone LIKE :keyword OR u.username LIKE :keyword OR u.full_name LIKE :keyword) ';
+            $params[':order_id_exact'] = (is_numeric($keyword) && !is_valid_phone($keyword)) ? (int) $keyword : -1;
+            $params[':keyword'] = '%' . $keyword . '%';
+        }
+
+        $status = is_string($status) ? trim($status) : '';
+        if (in_array($status, $this->returnStatuses(), true)) {
+            $sql .= 'AND o.order_status = :status ';
+            $params[':status'] = $status;
+        }
+
+        $sql .= 'ORDER BY FIELD(o.order_status, \'return_request\', \'return_accepted\', \'return_rejected\', \'returned\'), o.order_id DESC';
+
+        try {
+            $statement = $this->pdo->prepare($sql);
+            foreach ($params as $key => $value) {
+                $statement->bindValue($key, $value);
+            }
+            $statement->execute();
+
+            return array_map([$this, 'normalizeOrder'], $statement->fetchAll());
+        } catch (Throwable $e) {
+            throw new RuntimeException('Không thể tải danh sách yêu cầu hoàn hàng từ cơ sở dữ liệu.', 0, $e);
+        }
+    }
+
+    public function getReturnStats()
+    {
+        $sql = 'SELECT COUNT(*) AS total, '
+             . 'SUM(CASE WHEN o.order_status = \'return_request\' THEN 1 ELSE 0 END) AS pending, '
+             . 'SUM(CASE WHEN o.order_status = \'return_accepted\' THEN 1 ELSE 0 END) AS accepted, '
+             . 'SUM(CASE WHEN o.order_status = \'return_rejected\' THEN 1 ELSE 0 END) AS rejected '
+             . 'FROM ' . $this->table . ' o '
+             . 'WHERE ' . $this->returnRequestCondition();
+
+        try {
+            $row = $this->pdo->query($sql)->fetch();
+        } catch (Throwable $e) {
+            $row = null;
+        }
+
+        return [
+            'total'    => (int) ($row['total'] ?? 0),
+            'pending'  => (int) ($row['pending'] ?? 0),
+            'accepted' => (int) ($row['accepted'] ?? 0),
+            'rejected' => (int) ($row['rejected'] ?? 0),
+        ];
+    }
+
+    public function getReturnRequestById($orderId)
+    {
+        $order = $this->getById($orderId);
+        if (!$order) {
+            return null;
+        }
+
+        $status    = (string) ($order['order_status'] ?? '');
+        $hasReason = trim((string) ($order['return_reason'] ?? '')) !== '';
+
+        if (!in_array($status, $this->returnStatuses(), true) && !$hasReason) {
+            return null;
+        }
+
+        return $order;
+    }
+
+    public function updateReturnRequestDecision($orderId, $decision)
+    {
+        $orderId = (int) $orderId;
+        $map = [
+            'accept' => 'return_accepted',
+            'reject' => 'return_rejected',
+        ];
+
+        if ($orderId <= 0 || !isset($map[$decision])) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . ' '
+                 . 'SET order_status = :status '
+                 . 'WHERE order_id = :id AND order_status = \'return_request\'';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':status', $map[$decision]);
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->execute();
+
+            return $statement->rowCount() > 0;
+        } catch (Throwable $e) {
+            return false;
         }
     }
 

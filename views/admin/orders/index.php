@@ -15,8 +15,10 @@ $statusLabels = [
     'shipping'       => ['text' => 'Đang giao',          'icon' => 'bi-truck',                   'class' => 'admin-order-shipping'],
     'completed'      => ['text' => 'Hoàn thành',         'icon' => 'bi-check-circle-fill',       'class' => 'admin-order-completed'],
     'cancelled'      => ['text' => 'Đã hủy',             'icon' => 'bi-x-circle-fill',           'class' => 'admin-order-cancelled'],
-    'return_request' => ['text' => 'Yêu cầu hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
-    'returned'       => ['text' => 'Đã hoàn hàng',       'icon' => 'bi-arrow-return-left',       'class' => 'admin-order-returned'],
+    'return_request'  => ['text' => 'Chờ xử lý hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
+    'return_accepted' => ['text' => 'Đã chấp nhận hoàn',   'icon' => 'bi-check2-circle',          'class' => 'admin-order-return-accepted'],
+    'return_rejected' => ['text' => 'Đã từ chối hoàn',     'icon' => 'bi-x-circle',               'class' => 'admin-order-return-rejected'],
+    'returned'        => ['text' => 'Đã hoàn tất',         'icon' => 'bi-arrow-return-left',      'class' => 'admin-order-returned'],
 ];
 ?>
 
@@ -70,8 +72,10 @@ $statusLabels = [
                             <option value="shipping" <?= $status === 'shipping' ? 'selected' : '' ?>>Đang giao hàng</option>
                             <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
                             <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
-                            <option value="return_request" <?= $status === 'return_request' ? 'selected' : '' ?>>Yêu cầu hoàn hàng</option>
-                            <option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Đã hoàn hàng</option>
+                            <option value="return_request" <?= $status === 'return_request' ? 'selected' : '' ?>>Chờ xử lý hoàn hàng</option>
+                            <option value="return_accepted" <?= $status === 'return_accepted' ? 'selected' : '' ?>>Đã chấp nhận hoàn</option>
+                            <option value="return_rejected" <?= $status === 'return_rejected' ? 'selected' : '' ?>>Đã từ chối hoàn</option>
+                            <option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Đã hoàn tất</option>
                         </select>
                     </div>
 

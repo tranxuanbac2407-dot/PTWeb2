@@ -23,8 +23,10 @@ $statusLabels = [
     'shipping'       => ['text' => 'Đang giao hàng',     'icon' => 'bi-truck',                   'class' => 'admin-order-shipping'],
     'completed'      => ['text' => 'Đã hoàn thành',      'icon' => 'bi-check-circle-fill',       'class' => 'admin-order-completed'],
     'cancelled'      => ['text' => 'Đã hủy',             'icon' => 'bi-x-circle-fill',           'class' => 'admin-order-cancelled'],
-    'return_request' => ['text' => 'Yêu cầu hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
-    'returned'       => ['text' => 'Đã hoàn hàng',       'icon' => 'bi-arrow-return-left',       'class' => 'admin-order-returned'],
+    'return_request'  => ['text' => 'Chờ xử lý hoàn hàng', 'icon' => 'bi-arrow-counterclockwise', 'class' => 'admin-order-return-request'],
+    'return_accepted' => ['text' => 'Đã chấp nhận hoàn',   'icon' => 'bi-check2-circle',          'class' => 'admin-order-return-accepted'],
+    'return_rejected' => ['text' => 'Đã từ chối hoàn',     'icon' => 'bi-x-circle',               'class' => 'admin-order-return-rejected'],
+    'returned'        => ['text' => 'Đã hoàn tất',         'icon' => 'bi-arrow-return-left',      'class' => 'admin-order-returned'],
 ];
 
 $currStatusInfo = $statusLabels[$currStatus] ?? ['text' => $currStatus, 'icon' => 'bi-question-circle', 'class' => 'admin-order-pending'];
@@ -182,8 +184,10 @@ $payMethodLabels = [
                                 <?php endif; ?>
                                 <option value="completed" <?= $currStatus === 'completed' ? 'selected' : '' ?>>Hoàn thành</option>
                                 <option value="cancelled" <?= $currStatus === 'cancelled' ? 'selected' : '' ?>>Đã hủy</option>
-                                <option value="return_request" <?= $currStatus === 'return_request' ? 'selected' : '' ?>>Yêu cầu hoàn hàng</option>
-                                <option value="returned" <?= $currStatus === 'returned' ? 'selected' : '' ?>>Đã hoàn hàng</option>
+                                <option value="return_request" <?= $currStatus === 'return_request' ? 'selected' : '' ?>>Chờ xử lý hoàn hàng</option>
+                                <option value="return_accepted" <?= $currStatus === 'return_accepted' ? 'selected' : '' ?>>Đã chấp nhận hoàn</option>
+                                <option value="return_rejected" <?= $currStatus === 'return_rejected' ? 'selected' : '' ?>>Đã từ chối hoàn</option>
+                                <option value="returned" <?= $currStatus === 'returned' ? 'selected' : '' ?>>Đã hoàn tất</option>
                             </select>
 
                             <button type="submit" class="admin-btn admin-btn-accent">

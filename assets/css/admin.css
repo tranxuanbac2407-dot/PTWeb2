@@ -1790,3 +1790,309 @@
     padding: 1.25rem;
 }
 
+.admin-order-return-accepted {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.admin-order-return-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+}
+
+.admin-return-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.admin-return-stat-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.1rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid var(--sx-border);
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+}
+
+.admin-return-stat-card::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: #64748b;
+}
+
+.admin-return-stat-card--pending::after {
+    background: #f59e0b;
+}
+
+.admin-return-stat-card--accepted::after {
+    background: #22c55e;
+}
+
+.admin-return-stat-card--rejected::after {
+    background: #ef4444;
+}
+
+.admin-return-stat-card__icon {
+    position: absolute;
+    top: 1rem;
+    right: 1.1rem;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 1.05rem;
+}
+
+.admin-return-stat-card--pending .admin-return-stat-card__icon {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.admin-return-stat-card--accepted .admin-return-stat-card__icon {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.admin-return-stat-card--rejected .admin-return-stat-card__icon {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.admin-return-stat-card__label {
+    color: var(--sx-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding-right: 2.5rem;
+}
+
+.admin-return-stat-card__value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--sx-dark);
+}
+
+.admin-filter-form {
+    width: 100%;
+}
+
+.admin-return-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.admin-return-badge--pending {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.admin-return-badge--accepted {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.admin-return-badge--rejected {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.admin-return-badge--completed {
+    background: #e2e8f0;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.admin-return-reason {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    color: var(--sx-muted);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.admin-returns-table tbody tr {
+    vertical-align: middle;
+}
+
+.admin-return-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+    color: var(--sx-muted);
+}
+
+.admin-return-empty > i {
+    font-size: 2.5rem;
+    color: #cbd5e1;
+}
+
+.admin-return-empty strong {
+    color: var(--sx-dark);
+    font-size: 1.05rem;
+}
+
+.admin-return-empty span {
+    max-width: 420px;
+    font-size: 0.9rem;
+}
+
+.admin-return-info-box {
+    margin-top: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    background: #fffbeb;
+}
+
+.admin-return-info-box__title {
+    display: flex;
+    align-items: center;
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #92400e;
+}
+
+.admin-return-reason-detail {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--sx-border);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--sx-dark);
+    line-height: 1.6;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.admin-return-image-link {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-width: 240px;
+    color: #0284c7;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-return-image-link img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border: 1px solid var(--sx-border);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.admin-return-image-link:hover {
+    color: #0369a1;
+}
+
+.admin-return-no-image {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.6rem 0.85rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: var(--sx-muted);
+    font-size: 0.88rem;
+}
+
+.admin-return-note {
+    margin-top: 1rem;
+    padding: 0.8rem 0.95rem;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #92400e;
+    font-size: 0.86rem;
+    line-height: 1.55;
+}
+
+.admin-return-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--sx-border);
+}
+
+.admin-return-processed {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 1.25rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: var(--sx-muted);
+    font-size: 0.88rem;
+}
+
+.admin-btn-outline-danger {
+    color: #b91c1c;
+    background: #ffffff;
+    border: 1px solid #fca5a5;
+}
+
+.admin-btn-outline-danger:hover {
+    color: #ffffff;
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+@media (max-width: 991.98px) {
+    .admin-return-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .admin-return-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-return-actions {
+        flex-direction: column;
+    }
+
+    .admin-return-actions form {
+        width: 100%;
+    }
+
+    .admin-return-actions button {
+        width: 100%;
+    }
+}
+
