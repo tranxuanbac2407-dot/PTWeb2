@@ -317,6 +317,8 @@ class AdminController extends BaseController
             'category_id'    => 0,
             'price'          => '',
             'size'           => '',
+            'size_type'      => '',
+            'size_values'    => [],
             'color'          => '',
             'stock_quantity' => 0,
             'description'    => '',
@@ -328,6 +330,9 @@ class AdminController extends BaseController
             $old['category_id']    = (int) ($_POST['category_id'] ?? 0);
             $old['price']          = trim($_POST['price'] ?? '');
             $old['size']           = trim($_POST['size'] ?? '');
+            $old['size_type']      = trim($_POST['size_type'] ?? '');
+            $sizeValues            = $_POST['size_values'] ?? [];
+            $old['size_values']    = is_array($sizeValues) ? $sizeValues : [];
             $old['color']          = trim($_POST['color'] ?? '');
             $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '0');
             $old['description']    = trim($_POST['description'] ?? '');
@@ -362,6 +367,18 @@ class AdminController extends BaseController
                 $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
             }
 
+            $finalSize = null;
+            if ($old['size_type'] === '' || $old['size_type'] === 'legacy') {
+                $errors['size'] = 'Vui lòng chọn loại kích thước.';
+            } else {
+                $sizeResult = normalize_product_size_selection($old['size_type'], $old['size_values']);
+                if ($sizeResult['error'] !== null) {
+                    $errors['size'] = $sizeResult['error'];
+                } else {
+                    $finalSize = $sizeResult['value'];
+                }
+            }
+
             // 6. Xử lý ảnh tải lên hoặc URL ảnh (hỗ trợ cả input image_file lẫn image)
             $finalImage = null;
             $imgError   = null;
@@ -387,7 +404,7 @@ class AdminController extends BaseController
                     'product_name'   => $old['product_name'],
                     'category_id'    => $old['category_id'],
                     'price'          => (float) $old['price'],
-                    'size'           => $old['size'] !== '' ? $old['size'] : null,
+                    'size'           => $finalSize,
                     'color'          => $old['color'] !== '' ? $old['color'] : null,
                     'stock_quantity' => (int) $old['stock_quantity'],
                     'description'    => $old['description'] !== '' ? $old['description'] : null,
@@ -449,12 +466,17 @@ class AdminController extends BaseController
             $this->redirect('?action=admin-products');
         }
 
+        $existingSize     = (string) ($product['size'] ?? '');
+        $existingSizeType = get_product_size_type($existingSize);
+
         $errors = [];
         $old = [
             'product_name'   => $product['product_name'] ?? '',
             'category_id'    => (int) ($product['category_id'] ?? 0),
             'price'          => $product['price'] ?? '',
-            'size'           => $product['size'] ?? '',
+            'size'           => $existingSize,
+            'size_type'      => $existingSizeType !== '' ? $existingSizeType : 'legacy',
+            'size_values'    => parse_product_size_values($existingSize),
             'color'          => $product['color'] ?? '',
             'stock_quantity' => $product['stock_quantity'] ?? 0,
             'description'    => $product['description'] ?? '',
@@ -466,6 +488,9 @@ class AdminController extends BaseController
             $old['category_id']    = (int) ($_POST['category_id'] ?? 0);
             $old['price']          = trim($_POST['price'] ?? '');
             $old['size']           = trim($_POST['size'] ?? '');
+            $old['size_type']      = trim($_POST['size_type'] ?? '');
+            $sizeValues            = $_POST['size_values'] ?? [];
+            $old['size_values']    = is_array($sizeValues) ? $sizeValues : [];
             $old['color']          = trim($_POST['color'] ?? '');
             $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '0');
             $old['description']    = trim($_POST['description'] ?? '');
@@ -499,6 +524,18 @@ class AdminController extends BaseController
             // 5. Validate số lượng tồn kho
             if ($old['stock_quantity'] === '' || !is_numeric($old['stock_quantity']) || (int) $old['stock_quantity'] < 0) {
                 $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
+            }
+
+            $finalSize = null;
+            if ($old['size_type'] === '') {
+                $errors['size'] = 'Vui lòng chọn loại kích thước.';
+            } else {
+                $sizeResult = normalize_product_size_selection($old['size_type'], $old['size_values'], $existingSize);
+                if ($sizeResult['error'] !== null) {
+                    $errors['size'] = $sizeResult['error'];
+                } else {
+                    $finalSize = $sizeResult['value'];
+                }
             }
 
             // 6. Xử lý quản lý và cập nhật ảnh sản phẩm
@@ -537,7 +574,7 @@ class AdminController extends BaseController
                     'product_name'   => $old['product_name'],
                     'category_id'    => $old['category_id'],
                     'price'          => (float) $old['price'],
-                    'size'           => $old['size'] !== '' ? $old['size'] : null,
+                    'size'           => $finalSize,
                     'color'          => $old['color'] !== '' ? $old['color'] : null,
                     'stock_quantity' => (int) $old['stock_quantity'],
                     'description'    => $old['description'] !== '' ? $old['description'] : null,
