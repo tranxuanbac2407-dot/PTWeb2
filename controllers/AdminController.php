@@ -813,6 +813,7 @@ class AdminController extends BaseController
         $csrfToken    = $this->csrfToken();
         $flashSuccess = $this->getFlash('success');
         $flashError   = $this->getFlash('error');
+        $nextStatus   = $orderModel->getNextDeliveryStatus((string) ($order['order_status'] ?? ''));
 
         $this->renderAdminPage(
             'orders/detail',
@@ -826,6 +827,7 @@ class AdminController extends BaseController
                 'csrfToken'    => $csrfToken,
                 'flashSuccess' => $flashSuccess,
                 'flashError'   => $flashError,
+                'nextStatus'   => $nextStatus,
             ]
         );
     }
@@ -868,8 +870,19 @@ class AdminController extends BaseController
         }
 
         $currentStatus = (string) ($order['order_status'] ?? 'pending');
-        if (!in_array($currentStatus, $allowedStatuses, true)) {
-            $this->setFlash('error', 'Đơn hàng đang ở trạng thái đặc biệt. Vui lòng sử dụng khu vực Quản lý hoàn hàng hoặc liên hệ quản trị viên.');
+        $nextStatus    = $orderModel->getNextDeliveryStatus($currentStatus);
+
+        if ($nextStatus === null) {
+            if (in_array($currentStatus, $allowedStatuses, true)) {
+                $this->setFlash('error', 'Đơn hàng #' . $id . ' đã hoàn tất giao hàng, không thể cập nhật tiếp.');
+            } else {
+                $this->setFlash('error', 'Đơn hàng đang ở trạng thái đặc biệt. Vui lòng sử dụng khu vực Quản lý hoàn hàng hoặc liên hệ quản trị viên.');
+            }
+            $this->redirect('?action=admin-order-detail&id=' . $id);
+        }
+
+        if ($status !== $nextStatus) {
+            $this->setFlash('error', 'Chuyển trạng thái không hợp lệ. Chỉ được chuyển sang đúng trạng thái kế tiếp; không được nhảy cóc, lùi lại hoặc chọn lại trạng thái hiện tại.');
             $this->redirect('?action=admin-order-detail&id=' . $id);
         }
 
@@ -927,6 +940,19 @@ class AdminController extends BaseController
         if (!$order) {
             $this->setFlash('error', 'Không tìm thấy đơn hàng #' . $id);
             $this->redirect('?action=admin-orders');
+        }
+
+        $currentStatus = (string) ($order['order_status'] ?? '');
+        if ($orderModel->getNextDeliveryStatus($currentStatus) !== 'shipping') {
+            $this->setFlash('error', 'Chỉ có thể xác nhận thanh toán và chuyển sang giao hàng khi đơn đang ở trạng thái Đang xử lý.');
+            $this->redirect('?action=admin-order-detail&id=' . $id);
+        }
+
+        $payMethod = (string) ($order['payment_method'] ?? 'cod');
+        $payStatus = (string) ($order['payment_status'] ?? 'unpaid');
+        if ($payMethod === 'cod' || $payStatus !== 'unpaid') {
+            $this->setFlash('error', 'Đơn hàng không đủ điều kiện xác nhận thanh toán Online.');
+            $this->redirect('?action=admin-order-detail&id=' . $id);
         }
 
         $success = $orderModel->confirmPaymentAndShip($id);
