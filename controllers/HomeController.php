@@ -99,17 +99,7 @@ class HomeController extends BaseController
             exit;
         }
 
-        // Parse danh sách kích thước (Size)
-        $sizes = [];
-        if (!empty($product['size'])) {
-            $rawSizes = explode(',', (string) $product['size']);
-            foreach ($rawSizes as $s) {
-                $trimmed = trim($s);
-                if ($trimmed !== '') {
-                    $sizes[] = $trimmed;
-                }
-            }
-        }
+        $sizes = parse_product_size_values($product['size'] ?? '');
 
         // Parse danh sách màu sắc (Color)
         $colors = [];
@@ -162,20 +152,15 @@ class HomeController extends BaseController
             exit;
         }
 
-        // Tự động gán thuộc tính mặc định nếu chưa chọn khi thêm nhanh
-        if ($size === '' && !empty($product['size'])) {
-            $rawSizes = explode(',', (string) $product['size']);
-            $size = trim($rawSizes[0] ?? '');
+        if ($size === '') {
+            $defaultSizes = parse_product_size_values($product['size'] ?? '');
+            $size = $defaultSizes[0] ?? '';
         }
         if ($color === '' && !empty($product['color'])) {
             $rawColors = explode(',', (string) $product['color']);
             $color = trim($rawColors[0] ?? '');
         }
 
-        // Nếu sản phẩm không có thuộc tính size hoặc color
-        if ($size === '') {
-            $size = 'Freesize';
-        }
         if ($color === '') {
             $color = 'Tiêu chuẩn';
         }

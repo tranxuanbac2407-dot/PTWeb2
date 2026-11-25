@@ -33,6 +33,143 @@ if (!function_exists('calculate_shipping_fee')) {
     }
 }
 
+if (!function_exists('product_size_none_value')) {
+    function product_size_none_value()
+    {
+        return 'Không áp dụng';
+    }
+}
+
+if (!function_exists('product_size_config')) {
+    function product_size_config($type = null)
+    {
+        $config = [
+            'clothing' => [
+                'label'  => 'Quần áo',
+                'values' => ['S', 'M', 'L', 'XL', 'XXL'],
+            ],
+            'shoes' => [
+                'label'  => 'Giày dép',
+                'values' => array_map('strval', range(36, 45)),
+            ],
+            'freesize' => [
+                'label'  => 'Freesize',
+                'values' => ['Freesize'],
+            ],
+            'none' => [
+                'label'  => 'Không áp dụng',
+                'values' => [],
+            ],
+        ];
+
+        if ($type === null) {
+            return $config;
+        }
+
+        return $config[$type] ?? null;
+    }
+}
+
+if (!function_exists('parse_product_size_values')) {
+    function parse_product_size_values($size)
+    {
+        $values = [];
+        foreach (explode(',', (string) $size) as $item) {
+            $item = trim($item);
+            if ($item !== '' && $item !== product_size_none_value()) {
+                $values[] = $item;
+            }
+        }
+
+        return $values;
+    }
+}
+
+if (!function_exists('get_product_size_type')) {
+    function get_product_size_type($size)
+    {
+        $raw = trim((string) $size);
+        if ($raw === '' || $raw === product_size_none_value()) {
+            return 'none';
+        }
+
+        if (strcasecmp($raw, 'Freesize') === 0) {
+            return 'freesize';
+        }
+
+        $values = parse_product_size_values($raw);
+        if (empty($values)) {
+            return 'none';
+        }
+
+        $allNumeric  = true;
+        $allClothing = true;
+        foreach ($values as $value) {
+            if (preg_match('/^\d{1,3}$/', $value) !== 1) {
+                $allNumeric = false;
+            }
+            if (preg_match('/^(XS|S|M|L|XL|XXL|XXXL)$/i', $value) !== 1) {
+                $allClothing = false;
+            }
+        }
+
+        if ($allNumeric) {
+            return 'shoes';
+        }
+        if ($allClothing) {
+            return 'clothing';
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('normalize_product_size_selection')) {
+    function normalize_product_size_selection($type, array $selected, $fallback = '')
+    {
+        $type = (string) $type;
+        if ($type === 'legacy') {
+            $raw = trim((string) $fallback);
+
+            return ['value' => $raw !== '' ? $raw : null, 'error' => null];
+        }
+
+        $config = product_size_config($type);
+        if ($config === null) {
+            return ['value' => null, 'error' => 'Loại kích thước không hợp lệ.'];
+        }
+
+        if ($type === 'none') {
+            return ['value' => product_size_none_value(), 'error' => null];
+        }
+
+        if ($type === 'freesize') {
+            return ['value' => 'Freesize', 'error' => null];
+        }
+
+        $allowed = array_values($config['values']);
+        $values  = [];
+        foreach ($selected as $item) {
+            $item = trim((string) $item);
+            if ($item === '') {
+                continue;
+            }
+            if (!in_array($item, $allowed, true)) {
+                return ['value' => null, 'error' => 'Kích thước không hợp lệ cho loại đã chọn.'];
+            }
+            if (!in_array($item, $values, true)) {
+                $values[] = $item;
+            }
+        }
+
+        if (empty($values)) {
+            return ['value' => null, 'error' => 'Vui lòng chọn ít nhất một kích thước hợp lệ.'];
+        }
+
+        return ['value' => implode(',', $values), 'error' => null];
+    }
+}
+
 if (!function_exists('debug')) {
     function debug($data)
     {

@@ -23,6 +23,26 @@ $valColor = $old['color'] ?? ($product['color'] ?? '');
 $valDesc  = $old['description'] ?? ($product['description'] ?? '');
 $valUrl   = $old['image_url'] ?? '';
 
+$sizeConfig      = product_size_config();
+$detectedType    = get_product_size_type((string) ($product['size'] ?? ''));
+$valSizeType     = $old['size_type'] ?? ($isEdit ? ($detectedType !== '' ? $detectedType : 'legacy') : '');
+$valSizeValues   = $old['size_values'] ?? parse_product_size_values($valSize);
+$legacySizeValue = $valSizeType === 'legacy' ? (string) ($old['size'] ?? ($product['size'] ?? '')) : '';
+
+if (!is_array($valSizeValues)) {
+    $valSizeValues = [];
+}
+
+if ($valSizeType === 'legacy') {
+    $valSizeInput = $legacySizeValue;
+} elseif ($valSizeType === 'none') {
+    $valSizeInput = product_size_none_value();
+} elseif ($valSizeType === 'freesize') {
+    $valSizeInput = 'Freesize';
+} else {
+    $valSizeInput = implode(',', $valSizeValues);
+}
+
 $currentImage = $product['image'] ?? null;
 $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : '';
 ?>
@@ -154,7 +174,7 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
 
                         <!-- Số lượng tồn kho, Size, Màu sắc -->
                         <div class="row g-3">
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <div class="admin-form-group">
                                     <label for="stock_quantity" class="admin-form-label">
                                         Tồn kho <span class="text-danger">*</span>
@@ -177,23 +197,7 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
                                 </div>
                             </div>
 
-                            <div class="col-12 col-md-4">
-                                <div class="admin-form-group">
-                                    <label for="size" class="admin-form-label">
-                                        Kích thước (Size)
-                                    </label>
-                                    <input type="text"
-                                           id="size"
-                                           name="size"
-                                           class="admin-form-input <?= !empty($errors['size']) ? 'is-invalid' : '' ?>"
-                                           placeholder="Ví dụ: S, M, L, XL"
-                                           value="<?= htmlspecialchars($valSize, ENT_QUOTES, 'UTF-8') ?>"
-                                           maxlength="50">
-                                    <p class="admin-form-hint">Các size cách nhau bằng dấu phẩy</p>
-                                </div>
-                            </div>
-
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-md-6">
                                 <div class="admin-form-group">
                                     <label for="color" class="admin-form-label">
                                         Màu sắc
@@ -206,6 +210,98 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
                                            value="<?= htmlspecialchars($valColor, ENT_QUOTES, 'UTF-8') ?>"
                                            maxlength="50">
                                     <p class="admin-form-hint">Các màu cách nhau bằng dấu phẩy</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3" style="margin-top: 1rem;">
+                            <div class="col-12 col-md-4">
+                                <div class="admin-form-group">
+                                    <label for="size_type" class="admin-form-label">
+                                        Loại kích thước <span class="text-danger">*</span>
+                                    </label>
+                                    <select id="size_type"
+                                            name="size_type"
+                                            class="admin-form-input <?= !empty($errors['size']) ? 'is-invalid' : '' ?>"
+                                            required>
+                                        <option value=""><?= $isEdit ? '-- Giữ nguyên / chọn loại --' : '-- Chọn loại kích thước --' ?></option>
+                                        <?php foreach ($sizeConfig as $typeKey => $typeInfo): ?>
+                                            <option value="<?= htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8') ?>" <?= $valSizeType === $typeKey ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($typeInfo['label'], ENT_QUOTES, 'UTF-8') ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                        <?php if ($valSizeType === 'legacy'): ?>
+                                            <option value="legacy" selected>Giữ nguyên dữ liệu cũ</option>
+                                        <?php endif; ?>
+                                    </select>
+                                    <?php if (!empty($errors['size'])): ?>
+                                        <p class="admin-field-error">
+                                            <i class="bi bi-exclamation-circle"></i>
+                                            <?= htmlspecialchars($errors['size'], ENT_QUOTES, 'UTF-8') ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-8">
+                                <div class="admin-form-group">
+                                    <span class="admin-form-label d-block">Kích thước áp dụng</span>
+
+                                    <?php foreach (['clothing', 'shoes'] as $typeKey): ?>
+                                        <div id="sizePanel_<?= $typeKey ?>"
+                                             class="d-flex flex-wrap gap-2"
+                                             data-size-panel="<?= $typeKey ?>"
+                                             data-size-display="flex"
+                                             style="<?= $valSizeType === $typeKey ? 'display: flex;' : 'display: none;' ?>">
+                                            <?php foreach ($sizeConfig[$typeKey]['values'] as $sizeOption): ?>
+                                                <label class="admin-attr-pill">
+                                                    <input type="checkbox"
+                                                           class="form-check-input size-value-input"
+                                                           name="size_values[]"
+                                                           value="<?= htmlspecialchars($sizeOption, ENT_QUOTES, 'UTF-8') ?>"
+                                                           <?= in_array($sizeOption, $valSizeValues, true) ? 'checked' : '' ?>>
+                                                    <?= htmlspecialchars($sizeOption, ENT_QUOTES, 'UTF-8') ?>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+
+                                    <div id="sizePanel_freesize"
+                                         class="d-flex flex-wrap gap-2"
+                                         data-size-panel="freesize"
+                                         data-size-display="flex"
+                                         style="<?= $valSizeType === 'freesize' ? 'display: flex;' : 'display: none;' ?>">
+                                        <label class="admin-attr-pill">
+                                            <input type="checkbox"
+                                                   class="form-check-input size-value-input"
+                                                   value="Freesize"
+                                                   checked
+                                                   disabled>
+                                            Freesize
+                                        </label>
+                                    </div>
+
+                                    <div id="sizePanel_none"
+                                         class="admin-form-hint"
+                                         data-size-panel="none"
+                                         data-size-display="block"
+                                         style="<?= $valSizeType === 'none' ? 'display: block;' : 'display: none;' ?>">
+                                        Sản phẩm này không áp dụng kích thước.
+                                    </div>
+
+                                    <div id="sizePanel_legacy"
+                                         class="admin-form-hint"
+                                         data-size-panel="legacy"
+                                         data-size-display="block"
+                                         style="<?= $valSizeType === 'legacy' ? 'display: block;' : 'display: none;' ?>">
+                                        Dữ liệu size cũ: <strong><?= htmlspecialchars($legacySizeValue, ENT_QUOTES, 'UTF-8') ?></strong>. Chọn loại kích thước để chuẩn hóa khi lưu.
+                                    </div>
+
+                                    <input type="hidden"
+                                           id="size"
+                                           name="size"
+                                           value="<?= htmlspecialchars($valSizeInput, ENT_QUOTES, 'UTF-8') ?>"
+                                           data-legacy-size="<?= htmlspecialchars($legacySizeValue, ENT_QUOTES, 'UTF-8') ?>">
                                 </div>
                             </div>
                         </div>
@@ -468,5 +564,63 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sizeTypeSelect = document.getElementById('size_type');
+    const sizeHiddenInput = document.getElementById('size');
+
+    if (!sizeTypeSelect || !sizeHiddenInput) {
+        return;
+    }
+
+    const noneValue = <?= json_encode(product_size_none_value(), JSON_UNESCAPED_UNICODE) ?>;
+    const sizePanels = document.querySelectorAll('[data-size-panel]');
+    const sizeInputs = document.querySelectorAll('.size-value-input');
+
+    const syncSizeFields = function () {
+        const type = sizeTypeSelect.value;
+
+        sizeInputs.forEach(function (input) {
+            if (input.disabled) {
+                return;
+            }
+            const panel = input.closest('[data-size-panel]');
+            if (!panel || panel.getAttribute('data-size-panel') !== type) {
+                input.checked = false;
+            }
+        });
+
+        sizePanels.forEach(function (panel) {
+            const display = panel.getAttribute('data-size-display') === 'block' ? 'block' : 'flex';
+            panel.style.display = panel.getAttribute('data-size-panel') === type ? display : 'none';
+        });
+
+        let value = '';
+        if (type === 'none') {
+            value = noneValue;
+        } else if (type === 'freesize') {
+            value = 'Freesize';
+        } else if (type === 'legacy') {
+            value = sizeHiddenInput.getAttribute('data-legacy-size') || '';
+        } else {
+            const selected = document.querySelectorAll('[data-size-panel="' + type + '"] .size-value-input:checked');
+            const values = [];
+            selected.forEach(function (input) {
+                values.push(input.value);
+            });
+            value = values.join(',');
+        }
+
+        sizeHiddenInput.value = value;
+    };
+
+    sizeTypeSelect.addEventListener('change', syncSizeFields);
+    sizeInputs.forEach(function (input) {
+        input.addEventListener('change', syncSizeFields);
+    });
+    syncSizeFields();
 });
 </script>

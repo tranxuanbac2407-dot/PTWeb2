@@ -360,6 +360,20 @@ class OrderModel extends BaseModel
         }
     }
 
+    public function getNextDeliveryStatus($status)
+    {
+        $transitions = [
+            'pending'    => 'processing',
+            'processing' => 'shipping',
+            'shipping'   => 'completed',
+            'completed'  => null,
+        ];
+
+        $status = (string) $status;
+
+        return $transitions[$status] ?? null;
+    }
+
     /**
      * Cập nhật trạng thái đơn hàng.
      *
@@ -369,33 +383,31 @@ class OrderModel extends BaseModel
      */
     public function updateStatus($orderId, $status)
     {
-        $allowedStatuses = [
-            'pending',
-            'processing',
-            'shipping',
-            'completed',
-            'cancelled',
-            'return_request',
-            'return_accepted',
-            'return_rejected',
-            'returned',
-        ];
-        if (!in_array($status, $allowedStatuses, true)) {
+        $orderId = (int) $orderId;
+        $status  = (string) $status;
+
+        $order = $this->getById($orderId);
+        if (!$order) {
+            return false;
+        }
+
+        $currentStatus = (string) ($order['order_status'] ?? '');
+        if ($status !== $this->getNextDeliveryStatus($currentStatus)) {
             return false;
         }
 
         try {
-            $sql = 'UPDATE ' . $this->table . ' SET order_status = :status WHERE order_id = :id';
+            $sql = 'UPDATE ' . $this->table . ' SET order_status = :status WHERE order_id = :id AND order_status = :current_status';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':status', $status);
-            $statement->bindValue(':id', (int) $orderId, PDO::PARAM_INT);
-            $res = $statement->execute();
+            $statement->bindValue(':current_status', $currentStatus);
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $res = $statement->execute() && $statement->rowCount() > 0;
 
             // Nếu đơn hàng online được chuyển sang đang giao hàng (shipping) hoặc hoàn thành (completed) -> chắc chắn đã thanh toán thành công
             if ($res && in_array($status, ['shipping', 'completed'], true)) {
                 try {
-                    $order = $this->getById($orderId);
-                    if ($order && (($order['payment_method'] ?? '') !== 'cod' || $status === 'completed')) {
+                    if ((($order['payment_method'] ?? '') !== 'cod') || $status === 'completed') {
                         $this->updatePaymentStatus($orderId, 'paid');
                     }
                 } catch (Throwable $pe) {}
@@ -649,24 +661,38 @@ class OrderModel extends BaseModel
         }
 
         try {
-            $sql = 'UPDATE ' . $this->table . ' 
-                    SET payment_status = :p_status, order_status = :o_status 
-                    WHERE order_id = :id';
+            $sql = 'UPDATE ' . $this->table . '
+                    SET payment_status = :p_status, order_status = :o_status
+                    WHERE order_id = :id
+                      AND order_status = :current_status
+                      AND (payment_method IS NULL OR payment_method <> :cod)
+                      AND (payment_status IS NULL OR payment_status = :unpaid)';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':p_status', 'paid');
             $statement->bindValue(':o_status', 'shipping');
+            $statement->bindValue(':current_status', 'processing');
+            $statement->bindValue(':cod', 'cod');
+            $statement->bindValue(':unpaid', 'unpaid');
             $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->execute();
 
-            return $statement->execute();
+            return $statement->rowCount() > 0;
         } catch (Throwable $e) {
             // Fallback nếu cột payment_status chưa được tạo
             try {
-                $sqlFallback = 'UPDATE ' . $this->table . ' SET order_status = :o_status WHERE order_id = :id';
+                $sqlFallback = 'UPDATE ' . $this->table . '
+                                SET order_status = :o_status
+                                WHERE order_id = :id
+                                  AND order_status = :current_status
+                                  AND (payment_method IS NULL OR payment_method <> :cod)';
                 $statement = $this->pdo->prepare($sqlFallback);
                 $statement->bindValue(':o_status', 'shipping');
+                $statement->bindValue(':current_status', 'processing');
+                $statement->bindValue(':cod', 'cod');
                 $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+                $statement->execute();
 
-                return $statement->execute();
+                return $statement->rowCount() > 0;
             } catch (Throwable $e2) {
                 return false;
             }
