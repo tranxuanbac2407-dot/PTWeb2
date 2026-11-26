@@ -199,8 +199,9 @@ $statusLabels = [
                                 <!-- Cột 6: Trạng thái (Trạng thái hiện tại) -->
                                 <td class="text-center">
                                     <?php
-                                        $rowIsOnline = (($order['payment_method'] ?? 'cod') !== 'cod');
-                                        $rowIsPaid   = (($order['payment_status'] ?? 'unpaid') === 'paid');
+                                        $rowIsOnline  = (($order['payment_method'] ?? 'cod') !== 'cod');
+                                        $rowPayStatus = (string) ($order['payment_status'] ?? 'unpaid');
+                                        $rowIsPaid    = ($rowPayStatus === 'paid');
                                     ?>
                                     <span class="admin-order-badge <?= htmlspecialchars($stInfo['class'], ENT_QUOTES, 'UTF-8') ?>">
                                         <i class="bi <?= htmlspecialchars($stInfo['icon'], ENT_QUOTES, 'UTF-8') ?> me-1"></i>
@@ -208,10 +209,18 @@ $statusLabels = [
                                     </span>
 
                                     <div class="mt-1">
-                                        <?php if ($rowIsOnline): ?>
+                                        <?php if ($rowPayStatus === 'refunded'): ?>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-0 px-2" style="font-size: 0.72rem;">
+                                                <i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền
+                                            </span>
+                                        <?php elseif ($rowIsOnline): ?>
                                             <?php if ($rowIsPaid): ?>
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle py-0 px-2" style="font-size: 0.72rem;">
                                                     <i class="bi bi-check-circle-fill me-1"></i>Đã TT thành công
+                                                </span>
+                                            <?php elseif ($rowPayStatus === 'pending_confirm'): ?>
+                                                <span class="badge bg-info-subtle text-dark border border-info-subtle py-0 px-2" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-qr-code-scan me-1"></i>Đã quét QR (Chờ Admin)
                                                 </span>
                                             <?php else: ?>
                                                 <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-0 px-2" style="font-size: 0.72rem;">

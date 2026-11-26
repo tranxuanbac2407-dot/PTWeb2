@@ -109,13 +109,15 @@ $payMethodLabels = [
                             </div>
                             <div class="col-6">
                                 <span class="text-muted small d-block">Trạng thái thanh toán:</span>
-                                <?php if ($isOnlinePayment): ?>
+                                <?php if (($order['payment_status'] ?? '') === 'refunded'): ?>
+                                    <span class="badge bg-secondary px-2 py-1"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                                <?php elseif ($isOnlinePayment): ?>
                                     <?php if ($isPaid): ?>
                                         <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
-                                    <?php elseif (($order['payment_status'] ?? '') === 'refunded'): ?>
-                                        <span class="badge bg-secondary px-2 py-1"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                                    <?php elseif (($order['payment_status'] ?? '') === 'pending_confirm'): ?>
+                                        <span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-qr-code-scan me-1"></i>Khách đã quét QR (Chờ Admin xác nhận)</span>
                                     <?php else: ?>
-                                        <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chưa thanh toán (Chờ xác nhận)</span>
+                                        <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chưa thanh toán (Chờ quét QR)</span>
                                     <?php endif; ?>
                                 <?php else: ?>
                                     <?php if ($currStatus === 'completed'): ?>
@@ -143,24 +145,40 @@ $payMethodLabels = [
                         </div>
                     <?php endif; ?>
 
-                    <?php if ($isOnlinePayment && !$isPaid && $currStatus === 'processing'): ?>
-                        <!-- Khối hành động: Xác nhận thanh toán Online & Bắt đầu giao hàng -->
-                        <div class="admin-payment-action-card p-3 mb-3 rounded-3 border border-primary bg-primary bg-opacity-10">
+                    <?php if ($isOnlinePayment && !$isPaid && in_array($currStatus, ['pending', 'processing'], true)): ?>
+                        <?php $isPendingConfirm = (($order['payment_status'] ?? '') === 'pending_confirm'); ?>
+                        <!-- Khối hành động: Admin xác nhận thêm 1 bước khi tiền đã vào tài khoản -->
+                        <div class="admin-payment-action-card p-3 mb-3 rounded-3 border <?= $isPendingConfirm ? 'border-info bg-info bg-opacity-10' : 'border-primary bg-primary bg-opacity-10' ?>">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div>
-                                    <h5 class="fs-6 fw-bold text-primary mb-1 d-flex align-items-center">
-                                        <i class="bi bi-qr-code-scan me-2 fs-5"></i>Xác nhận thanh toán Online &amp; Bắt đầu giao hàng
+                                    <h5 class="fs-6 fw-bold <?= $isPendingConfirm ? 'text-dark' : 'text-primary' ?> mb-1 d-flex align-items-center">
+                                        <i class="bi bi-qr-code-scan me-2 fs-5"></i>
+                                        <?= $isPendingConfirm
+                                            ? 'Khách đã quét QR thanh toán — Chờ Admin xác nhận thêm 1 bước'
+                                            : 'Xác nhận thanh toán Online' ?>
                                     </h5>
                                     <p class="mb-0 text-muted small">
-                                        Khách hàng chọn thanh toán Online. <strong>Chỉ có thanh toán thành công thì mới giao hàng.</strong> Khi tiền đã về tài khoản, hãy nhấn xác nhận:
+                                        <?php if ($isPendingConfirm): ?>
+                                            Khách hàng đã xác nhận quét mã QR chuyển khoản <strong><?= number_format($totalAmount, 0, ',', '.') ?> đ</strong>. Admin vui lòng kiểm tra tài khoản ngân hàng đã nhận tiền thật sự rồi bấm xác nhận bên cạnh!
+                                        <?php else: ?>
+                                            Khách hàng chọn thanh toán Online. <strong>Chỉ có thanh toán thành công thì mới giao hàng.</strong> Khi tiền đã về tài khoản, hãy nhấn xác nhận:
+                                        <?php endif; ?>
                                     </p>
                                 </div>
-                                <form action="<?= BASE_URL ?>?action=admin-order-confirm-payment" method="post" class="m-0" onsubmit="return confirm('Bạn xác nhận tài khoản đã nhận đủ số tiền <?= number_format($totalAmount, 0, ',', '.') ?> đ và muốn chuyển đơn sang trạng thái ĐANG GIAO HÀNG?');">
+                                <?php
+                                    $btnLabel = $currStatus === 'pending'
+                                        ? 'Xác nhận đã nhận tiền &amp; Chuẩn bị hàng'
+                                        : 'Xác nhận đã nhận tiền &amp; Giao hàng';
+                                    $confirmText = $currStatus === 'pending'
+                                        ? 'Bạn xác nhận tài khoản đã nhận đủ ' . number_format($totalAmount, 0, ',', '.') . ' đ và muốn chuyển đơn sang ĐANG XỬ LÝ?'
+                                        : 'Bạn xác nhận tài khoản đã nhận đủ ' . number_format($totalAmount, 0, ',', '.') . ' đ và muốn chuyển đơn sang ĐANG GIAO HÀNG?';
+                                ?>
+                                <form action="<?= BASE_URL ?>?action=admin-order-confirm-payment" method="post" class="m-0" onsubmit="return confirm('<?= htmlspecialchars($confirmText, ENT_QUOTES, 'UTF-8') ?>');">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="order_id" value="<?= $orderId ?>">
                                     <button type="submit" class="admin-btn admin-btn-accent fw-bold py-2 px-3 d-flex align-items-center">
                                         <i class="bi bi-check2-all me-1 fs-5"></i>
-                                        <span>Xác nhận đã thanh toán &amp; Giao hàng</span>
+                                        <span><?= $btnLabel ?></span>
                                     </button>
                                 </form>
                             </div>
