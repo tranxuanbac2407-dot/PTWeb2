@@ -532,13 +532,34 @@ class HomeController extends BaseController
         $orderModel = new OrderModel();
         $order = $orderModel->getById($orderId, (int) $authenticatedUser['id']);
         if (!$order) {
+            if (($_POST['ajax'] ?? '') === '1') {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy đơn hàng.']);
+                exit;
+            }
             $_SESSION['flash_error'] = 'Không tìm thấy đơn hàng.';
             header('Location: ' . BASE_URL . '?action=order-history');
             exit;
         }
 
-        $orderModel->updatePaymentStatus($orderId, 'paid');
-        $_SESSION['flash_success'] = 'Cảm ơn bạn! Hệ thống đã ghi nhận xác nhận chuyển khoản cho đơn hàng #' . $orderId . '.';
+        $currentPayStatus = (string) ($order['payment_status'] ?? 'unpaid');
+        if ($currentPayStatus !== 'paid' && $currentPayStatus !== 'refunded') {
+            $orderModel->updatePaymentStatus($orderId, 'pending_confirm');
+        }
+
+        $successMessage = 'Đã xác nhận thanh toán qua mã QR cho đơn hàng #' . $orderId . '! Hệ thống đang chờ Admin đối soát xác nhận tiền về tài khoản trước khi giao hàng.';
+
+        if (($_POST['ajax'] ?? '') === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'payment_status' => $currentPayStatus === 'paid' ? 'paid' : 'pending_confirm',
+                'message' => $successMessage,
+            ]);
+            exit;
+        }
+
+        $_SESSION['flash_success'] = $successMessage;
 
         $returnTo = trim($_POST['return_to'] ?? '');
         if ($returnTo === 'success') {

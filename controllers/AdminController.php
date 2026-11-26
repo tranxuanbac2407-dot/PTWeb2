@@ -980,24 +980,30 @@ class AdminController extends BaseController
         }
 
         $currentStatus = (string) ($order['order_status'] ?? '');
-        if ($orderModel->getNextDeliveryStatus($currentStatus) !== 'shipping') {
-            $this->setFlash('error', 'Chỉ có thể xác nhận thanh toán và chuyển sang giao hàng khi đơn đang ở trạng thái Đang xử lý.');
-            $this->redirect('?action=admin-order-detail&id=' . $id);
-        }
-
         $payMethod = (string) ($order['payment_method'] ?? 'cod');
         $payStatus = (string) ($order['payment_status'] ?? 'unpaid');
-        if ($payMethod === 'cod' || $payStatus !== 'unpaid') {
+
+        if ($payMethod === 'cod' || !in_array($payStatus, ['unpaid', 'pending_confirm'], true)) {
             $this->setFlash('error', 'Đơn hàng không đủ điều kiện xác nhận thanh toán Online.');
             $this->redirect('?action=admin-order-detail&id=' . $id);
         }
 
-        $success = $orderModel->confirmPaymentAndShip($id);
-
-        if ($success) {
-            $this->setFlash('success', 'Đã xác nhận thanh toán thành công cho đơn hàng #' . $id . ' và chuyển sang trạng thái Đang giao hàng!');
+        if ($currentStatus === 'pending') {
+            $success = $orderModel->confirmPaymentOnly($id);
+            if ($success) {
+                $this->setFlash('success', 'Admin đã xác nhận nhận đủ tiền cho đơn #' . $id . ' và chuyển đơn sang Đang xử lý!');
+            } else {
+                $this->setFlash('error', 'Không thể xác nhận thanh toán cho đơn hàng #' . $id . '. Vui lòng thử lại.');
+            }
+        } elseif ($currentStatus === 'processing') {
+            $success = $orderModel->confirmPaymentAndShip($id);
+            if ($success) {
+                $this->setFlash('success', 'Admin đã xác nhận thanh toán thành công cho đơn hàng #' . $id . ' và chuyển sang trạng thái Đang giao hàng!');
+            } else {
+                $this->setFlash('error', 'Không thể xác nhận thanh toán cho đơn hàng #' . $id . '. Vui lòng thử lại.');
+            }
         } else {
-            $this->setFlash('error', 'Không thể xác nhận thanh toán cho đơn hàng #' . $id . '. Vui lòng thử lại.');
+            $this->setFlash('error', 'Chỉ có thể xác nhận thanh toán khi đơn đang ở trạng thái Chờ xác nhận hoặc Đang xử lý.');
         }
 
         $this->redirect('?action=admin-order-detail&id=' . $id);
@@ -1166,10 +1172,32 @@ class AdminController extends BaseController
             $this->redirect('?action=admin-return-detail&id=' . $id);
         }
 
-        $success = $orderModel->completeReturn($id);
+        $confirmReceived = !empty($_POST['confirm_received']);
+        $confirmRefunded = !empty($_POST['confirm_refunded']);
+        if (!$confirmReceived || !$confirmRefunded) {
+            $this->setFlash('error', 'Vui lòng tích xác nhận đầy đủ 2 bước: (1) Đã thu hồi hàng nguyên tem mác và (2) Đã hoàn tiền cho khách trước khi hoàn tất.');
+            $this->redirect('?action=admin-return-detail&id=' . $id);
+        }
+
+        $payMethod    = (string) ($order['payment_method'] ?? 'cod');
+        $refundMethod = trim((string) ($_POST['refund_method'] ?? ''));
+        $refundNote   = trim((string) ($_POST['refund_note'] ?? ''));
+
+        if ($refundMethod === '') {
+            $refundMethod = ($payMethod === 'cod')
+                ? 'Hoàn tiền mặt khi thu hồi hàng COD'
+                : 'Chuyển khoản hoàn tiền về tài khoản thanh toán Online ban đầu';
+        }
+
+        $fullRefundNote = $refundMethod;
+        if ($refundNote !== '') {
+            $fullRefundNote .= ' — Ghi chú/Mã GD: ' . $refundNote;
+        }
+
+        $success = $orderModel->completeReturn($id, $fullRefundNote);
 
         if ($success) {
-            $this->setFlash('success', 'Đã xác nhận hoàn tất hoàn hàng cho đơn #' . $id . '. Trạng thái thanh toán không thay đổi; vui lòng đảm bảo khoản hoàn tiền đã được đối soát theo quy trình thực tế.');
+            $this->setFlash('success', 'Đã xác nhận thu hồi hàng và hoàn tiền thành công cho đơn #' . $id . ' (' . $refundMethod . ').');
         } else {
             $this->setFlash('error', 'Không thể cập nhật hoàn tất hoàn hàng #' . $id . '. Vui lòng thử lại.');
         }
