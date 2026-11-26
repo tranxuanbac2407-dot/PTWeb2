@@ -178,15 +178,22 @@ function get_payment_name($method) {
                                     <div class="col-12 col-md-6 text-md-end">
                                         <div>
                                             <strong class="text-dark">Thanh toán:</strong> <?= get_payment_name($order['payment_method'] ?? 'cod') ?>
-                                            <?php if (($order['payment_method'] ?? 'cod') !== 'cod'): ?>
+                                            <?php
+                                                $itemSt = $order['order_status'] ?? 'pending';
+                                                $itemPaySt = $order['payment_status'] ?? 'unpaid';
+                                            ?>
+                                            <?php if ($itemPaySt === 'refunded'): ?>
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                                            <?php elseif (($order['payment_method'] ?? 'cod') !== 'cod'): ?>
                                                 <?php
-                                                    $itemSt = $order['order_status'] ?? 'pending';
-                                                    $itemPaid = (($order['payment_status'] ?? '') === 'paid') || in_array($itemSt, ['shipping', 'completed'], true);
+                                                    $itemPaid = ($itemPaySt === 'paid') || in_array($itemSt, ['shipping', 'completed'], true);
                                                 ?>
                                                 <?php if ($itemPaid): ?>
                                                     <span class="badge bg-success text-white ms-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                                                <?php elseif ($itemPaySt === 'pending_confirm'): ?>
+                                                    <span class="badge bg-info text-dark ms-1"><i class="bi bi-qr-code-scan me-1"></i>Đã quét QR (Chờ Admin)</span>
                                                 <?php else: ?>
-                                                    <span class="badge bg-warning text-dark ms-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                                                    <span class="badge bg-warning text-dark ms-1"><i class="bi bi-hourglass-split me-1"></i>Chờ quét mã thanh toán</span>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
