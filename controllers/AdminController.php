@@ -1125,13 +1125,22 @@ class AdminController extends BaseController
             $this->redirect('?action=admin-return-detail&id=' . $id);
         }
 
-        $success = $orderModel->updateReturnRequestDecision($id, $decision);
+        $rejectReason = null;
+        if ($decision === 'reject') {
+            $rejectReason = trim((string) ($_POST['reject_reason'] ?? ''));
+            if ($rejectReason === '') {
+                $this->setFlash('error', 'Vui lòng nhập lý do từ chối yêu cầu hoàn hàng cho đơn #' . $id . '.');
+                $this->redirect('?action=admin-return-detail&id=' . $id);
+            }
+        }
+
+        $success = $orderModel->updateReturnRequestDecision($id, $decision, $rejectReason);
 
         if ($success) {
             if ($decision === 'accept') {
-                $this->setFlash('success', 'Đã chấp nhận yêu cầu hoàn hàng cho đơn #' . $id . '. Trạng thái thanh toán không thay đổi; vui lòng đối soát giao dịch hoàn tiền thực tế trước khi cập nhật.');
+                $this->setFlash('success', 'Đã chấp nhận yêu cầu hoàn hàng cho đơn #' . $id . '. Vui lòng tiến hành thu hồi hàng và xác nhận hoàn tiền ở bước tiếp theo.');
             } else {
-                $this->setFlash('success', 'Đã từ chối yêu cầu hoàn hàng cho đơn #' . $id . '.');
+                $this->setFlash('success', 'Đã từ chối yêu cầu hoàn hàng cho đơn #' . $id . ' với lý do: ' . $rejectReason);
             }
         } else {
             $this->setFlash('error', 'Không thể cập nhật yêu cầu hoàn hàng #' . $id . '. Vui lòng thử lại.');

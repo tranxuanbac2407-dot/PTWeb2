@@ -40,8 +40,9 @@ $payStatusLabels = [
     'paid'            => 'Đã thanh toán',
     'refunded'        => 'Đã hoàn tiền',
 ];
-$isCodOrder = ($payMethod === 'cod');
-$refundNote = trim((string) ($order['refund_note'] ?? ''));
+$isCodOrder   = ($payMethod === 'cod');
+$refundNote   = trim((string) ($order['refund_note'] ?? ''));
+$rejectReason = trim((string) ($order['return_reject_reason'] ?? ''));
 ?>
 <div class="admin-return-detail-page">
 
@@ -152,6 +153,11 @@ $refundNote = trim((string) ($order['refund_note'] ?? ''));
                                 Vui lòng thực hiện lần lượt 2 bước xác nhận bên dưới sau khi đã nhận lại sản phẩm còn nguyên tem mác và đã hoàn đủ <strong><?= number_format($totalAmount, 0, ',', '.') ?> đ</strong> cho khách.
                             <?php elseif ($orderStatus === 'return_rejected'): ?>
                                 Yêu cầu đã bị từ chối. Không thể duyệt lại yêu cầu này.
+                                <?php if ($rejectReason !== ''): ?>
+                                    <div class="mt-2 p-2 bg-white rounded border border-danger-subtle text-danger small">
+                                        <strong><i class="bi bi-x-circle me-1"></i>Lý do từ chối:</strong> <?= nl2br(htmlspecialchars($rejectReason, ENT_QUOTES, 'UTF-8')) ?>
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 Yêu cầu đã hoàn tất quy trình thu hồi hàng và hoàn tiền (Trạng thái thanh toán: <strong><?= htmlspecialchars($payStatusLabels[$payStatus] ?? $payStatus, ENT_QUOTES, 'UTF-8') ?></strong>).
                                 <?php if ($refundNote !== ''): ?>
@@ -163,7 +169,7 @@ $refundNote = trim((string) ($order['refund_note'] ?? ''));
 
                     <?php if ($orderStatus === 'return_request'): ?>
                         <div class="admin-return-actions">
-                            <form action="<?= BASE_URL ?>?action=admin-return-accept" method="post">
+                            <form action="<?= BASE_URL ?>?action=admin-return-accept" method="post" onsubmit="return confirm('Xác nhận ĐỒNG Ý yêu cầu hoàn hàng #<?= $orderId ?>?');">
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                 <input type="hidden" name="order_id" value="<?= $orderId ?>">
                                 <button type="submit" class="admin-btn admin-btn-accent">
@@ -171,15 +177,65 @@ $refundNote = trim((string) ($order['refund_note'] ?? ''));
                                     Đồng ý hoàn hàng (Bước 1)
                                 </button>
                             </form>
-                            <form action="<?= BASE_URL ?>?action=admin-return-reject" method="post">
+                            <button type="button" class="admin-btn admin-btn-outline-danger" onclick="toggleRejectReturnBox(true)">
+                                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>
+                                Từ chối yêu cầu
+                            </button>
+                        </div>
+
+                        <!-- Khung nhập lý do từ chối bắt buộc (ẩn mặc định, mở khi bấm Từ chối yêu cầu) -->
+                        <div id="reject-return-box" class="p-3 rounded-3 border border-danger-subtle bg-danger bg-opacity-10 mt-3" style="display: none;">
+                            <h6 class="fw-bold text-danger mb-2 d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-exclamation-triangle-fill me-1"></i> Nhập lý do từ chối hoàn hàng #<?= $orderId ?></span>
+                                <button type="button" class="btn-close btn-sm" aria-label="Đóng" onclick="toggleRejectReturnBox(false)"></button>
+                            </h6>
+                            <form action="<?= BASE_URL ?>?action=admin-return-reject" method="post" onsubmit="return confirm('Bạn xác nhận TỪ CHỐI yêu cầu hoàn hàng #<?= $orderId ?> với lý do đã nhập?\n\nKhách hàng sẽ nhìn thấy lý do này trong chi tiết đơn hàng.');">
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                 <input type="hidden" name="order_id" value="<?= $orderId ?>">
-                                <button type="submit" class="admin-btn admin-btn-outline-danger">
-                                    <i class="bi bi-x-circle me-1" aria-hidden="true"></i>
-                                    Từ chối yêu cầu
-                                </button>
+
+                                <div class="mb-2">
+                                    <label for="reject_preset" class="form-label small text-muted mb-1">Chọn nhanh lý do mẫu (tùy chọn):</label>
+                                    <select id="reject_preset" class="form-select form-select-sm" onchange="applyRejectPreset(this.value)">
+                                        <option value="">-- Chọn lý do phổ biến --</option>
+                                        <option value="Sản phẩm đã qua sử dụng, bị rách hoặc mất tem mác nguyên vẹn">Sản phẩm đã qua sử dụng, bị rách hoặc mất tem mác nguyên vẹn</option>
+                                        <option value="Hình ảnh cung cấp không rõ ràng hoặc không đúng sản phẩm của cửa hàng">Hình ảnh cung cấp không rõ ràng hoặc không đúng sản phẩm của cửa hàng</option>
+                                        <option value="Đơn hàng đã quá thời hạn 7 ngày hỗ trợ hoàn trả theo chính sách">Đơn hàng đã quá thời hạn 7 ngày hỗ trợ hoàn trả theo chính sách</option>
+                                        <option value="Sản phẩm thuộc danh mục không áp dụng đổi trả">Sản phẩm thuộc danh mục không áp dụng đổi trả</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="reject_reason" class="form-label small fw-semibold text-dark mb-1">Lý do từ chối gửi tới khách hàng <span class="text-danger">*</span></label>
+                                    <textarea class="form-control form-control-sm" id="reject_reason" name="reject_reason" rows="3" placeholder="Vui lòng nhập rõ lý do từ chối để khách hàng nắm được..." required></textarea>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleRejectReturnBox(false)">Hủy</button>
+                                    <button type="submit" class="btn btn-sm btn-danger fw-semibold">
+                                        <i class="bi bi-x-circle me-1"></i> Xác nhận từ chối hoàn hàng
+                                    </button>
+                                </div>
                             </form>
                         </div>
+
+                        <script>
+                        function toggleRejectReturnBox(show) {
+                            const box = document.getElementById('reject-return-box');
+                            if (!box) return;
+                            box.style.display = show ? 'block' : 'none';
+                            if (show) {
+                                const input = document.getElementById('reject_reason');
+                                if (input) input.focus();
+                            }
+                        }
+                        function applyRejectPreset(val) {
+                            const input = document.getElementById('reject_reason');
+                            if (input && val) {
+                                input.value = val;
+                                input.focus();
+                            }
+                        }
+                        </script>
                     <?php elseif ($orderStatus === 'return_accepted'): ?>
                         <div class="p-3 rounded-3 border bg-light mt-3">
                             <h5 class="fs-6 fw-bold mb-3 d-flex align-items-center text-dark">
