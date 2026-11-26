@@ -399,12 +399,17 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                     </div>
                 </div>
 
-                <?php if (($order['payment_method'] ?? '') === 'banking' || ($order['payment_method'] ?? '') === 'momo'): ?>
+                <?php
+                    $isFullyPaid = $isPaidStatus || (($order['payment_status'] ?? '') === 'refunded');
+                    $showQrBlock = ($isOnlineMethod && !$isFullyPaid && $status !== 'cancelled');
+                ?>
+
+                <?php if ($showQrBlock): ?>
                     <?php
-                        $paymentStatus = $isPaidStatus ? 'paid' : (string) ($order['payment_status'] ?? 'unpaid');
+                        $paymentStatus = (string) ($order['payment_status'] ?? 'unpaid');
                         $qrDetailUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
                     ?>
-                    <!-- Khối mã VietQR thanh toán được bố trí sang cột trái rộng rãi -->
+                    <!-- Khối mã VietQR thanh toán được bố trí sang cột trái rộng rãi (ẩn khi đã thanh toán đầy đủ) -->
                     <div class="sx-card p-4 border border-primary border-opacity-25 shadow-sm" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
                         <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom flex-wrap gap-2">
                             <h4 class="fs-5 fw-bold text-primary mb-0 d-flex align-items-center">
@@ -498,13 +503,23 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                     <div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle shadow-xs">
                                         <i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin kiểm tra và xác nhận thêm 1 bước</strong> trước khi giao hàng.
                                     </div>
-                                <?php elseif ($isPaidStatus): ?>
-                                    <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold border border-success-subtle shadow-xs">
-                                        <i class="bi bi-patch-check-fill me-1 text-success"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng đang được giao đến bạn.
-                                    </div>
                                 <?php endif; ?>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <!-- Khi đã thanh toán đầy đủ (hoặc không cần QR), đẩy Địa chỉ nhận hàng sang cột trái -->
+                    <div class="sx-card p-4 shadow-sm">
+                        <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom d-flex align-items-center">
+                            <i class="bi bi-geo-alt-fill text-accent me-2"></i>Địa chỉ nhận hàng
+                        </h3>
+                        <div class="mb-2">
+                            <strong class="text-dark d-block"><?= htmlspecialchars($order['receiver_name'] ?? 'Khách hàng', ENT_QUOTES, 'UTF-8') ?></strong>
+                            <span class="text-muted"><i class="bi bi-telephone me-1"></i><?= htmlspecialchars($order['phone'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($order['shipping_address'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -568,7 +583,8 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                     </a>
                 </div>
 
-                <!-- Khối địa chỉ nhận hàng đặt phía dưới khối thanh toán -->
+                <?php if ($showQrBlock): ?>
+                <!-- Khối địa chỉ nhận hàng đặt phía dưới khối thanh toán khi cột trái đang hiển thị QR -->
                 <div class="sx-card p-4 shadow-sm">
                     <h3 class="fs-5 fw-bold mb-3 pb-2 border-bottom d-flex align-items-center">
                         <i class="bi bi-geo-alt-fill text-accent me-2"></i>Địa chỉ nhận hàng
@@ -581,6 +597,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($order['shipping_address'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 
