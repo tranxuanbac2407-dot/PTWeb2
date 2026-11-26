@@ -39,6 +39,10 @@ class OrderModel extends BaseModel
         } catch (Throwable $e) {}
 
         try {
+            $this->pdo->exec("ALTER TABLE {$this->table} ADD COLUMN `return_reject_reason` TEXT NULL AFTER `refund_note`");
+        } catch (Throwable $e) {}
+
+        try {
             // Tự động đồng bộ: mọi đơn hàng online mà admin đã chuyển sang shipping hoặc completed đều là paid
             $this->pdo->exec("UPDATE {$this->table} SET payment_status = 'paid' WHERE payment_method != 'cod' AND order_status IN ('shipping', 'completed') AND (payment_status IS NULL OR payment_status != 'paid')");
         } catch (Throwable $e) {}
@@ -574,9 +578,19 @@ class OrderModel extends BaseModel
         return $order;
     }
 
-    public function updateReturnRequestDecision($orderId, $decision)
+    /**
+     * Admin duyệt (accept) hoặc từ chối (reject) yêu cầu hoàn hàng.
+     * Khi từ chối bắt buộc phải có lý do từ chối ($rejectReason).
+     *
+     * @param int         $orderId
+     * @param string      $decision
+     * @param string|null $rejectReason
+     * @return bool
+     */
+    public function updateReturnRequestDecision($orderId, $decision, $rejectReason = null)
     {
-        $orderId = (int) $orderId;
+        $orderId      = (int) $orderId;
+        $rejectReason = $rejectReason !== null ? trim((string) $rejectReason) : null;
         $map = [
             'accept' => 'return_accepted',
             'reject' => 'return_rejected',
@@ -586,18 +600,45 @@ class OrderModel extends BaseModel
             return false;
         }
 
+        if ($decision === 'reject' && ($rejectReason === null || $rejectReason === '')) {
+            return false;
+        }
+
         try {
-            $sql = 'UPDATE ' . $this->table . ' '
-                 . 'SET order_status = :status '
-                 . 'WHERE order_id = :id AND order_status = \'return_request\'';
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':status', $map[$decision]);
-            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            if ($decision === 'reject') {
+                $sql = 'UPDATE ' . $this->table . ' '
+                     . 'SET order_status = :status, return_reject_reason = :reject_reason '
+                     . 'WHERE order_id = :id AND order_status = \'return_request\'';
+                $statement = $this->pdo->prepare($sql);
+                $statement->bindValue(':status', $map[$decision]);
+                $statement->bindValue(':reject_reason', $rejectReason);
+                $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            } else {
+                $sql = 'UPDATE ' . $this->table . ' '
+                     . 'SET order_status = :status '
+                     . 'WHERE order_id = :id AND order_status = \'return_request\'';
+                $statement = $this->pdo->prepare($sql);
+                $statement->bindValue(':status', $map[$decision]);
+                $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            }
             $statement->execute();
 
             return $statement->rowCount() > 0;
         } catch (Throwable $e) {
-            return false;
+            // Fallback nếu chưa có cột return_reject_reason
+            try {
+                $sqlFallback = 'UPDATE ' . $this->table . ' '
+                             . 'SET order_status = :status '
+                             . 'WHERE order_id = :id AND order_status = \'return_request\'';
+                $statement = $this->pdo->prepare($sqlFallback);
+                $statement->bindValue(':status', $map[$decision]);
+                $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+                $statement->execute();
+
+                return $statement->rowCount() > 0;
+            } catch (Throwable $e2) {
+                return false;
+            }
         }
     }
 
