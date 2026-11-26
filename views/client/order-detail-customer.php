@@ -204,8 +204,14 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                             <i class="bi bi-x-circle-fill fs-2 me-3 text-danger flex-shrink-0"></i>
                             <div class="flex-grow-1">
                                 <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã bị từ chối</h6>
-                                <p class="mb-1 small">Lý do đã gửi: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
-                                <small class="text-muted d-block">Yêu cầu hoàn hàng của bạn không đủ điều kiện chấp nhận. Nếu cần hỗ trợ thêm, vui lòng liên hệ SPORTIX qua hotline 1900 8888.</small>
+                                <p class="mb-1 small">Lý do bạn đã gửi: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                                <?php if (!empty($order['return_reject_reason'])): ?>
+                                    <div class="p-2 my-2 bg-white rounded border border-danger-subtle text-danger small">
+                                        <strong><i class="bi bi-exclamation-circle-fill me-1"></i>Lý do từ chối từ SPORTIX:</strong>
+                                        <?= nl2br(htmlspecialchars($order['return_reject_reason'], ENT_QUOTES, 'UTF-8')) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <small class="text-muted d-block">Nếu cần hỗ trợ thêm hoặc khiếu nại, vui lòng liên hệ SPORTIX qua hotline 1900 8888.</small>
                             </div>
                         </div>
                     </div>
