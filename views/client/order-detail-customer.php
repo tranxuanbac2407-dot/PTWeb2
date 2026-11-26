@@ -406,16 +406,16 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                 </div>
 
                 <?php
-                    $isFullyPaid = $isPaidStatus || (($order['payment_status'] ?? '') === 'refunded');
-                    $showQrBlock = ($isOnlineMethod && !$isFullyPaid && $status !== 'cancelled');
+                    $isCompletedOrEnd = in_array($status, ['completed', 'return_request', 'return_accepted', 'return_rejected', 'returned', 'cancelled'], true);
+                    $showQrBlock = ($isOnlineMethod && !$isCompletedOrEnd);
                 ?>
 
                 <?php if ($showQrBlock): ?>
                     <?php
-                        $paymentStatus = (string) ($order['payment_status'] ?? 'unpaid');
+                        $paymentStatus = $isPaidStatus ? 'paid' : (string) ($order['payment_status'] ?? 'unpaid');
                         $qrDetailUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH' . $ordId) : '';
                     ?>
-                    <!-- Khối mã VietQR thanh toán được bố trí sang cột trái rộng rãi (ẩn khi đã thanh toán đầy đủ) -->
+                    <!-- Khối mã VietQR thanh toán giữ lại đến hết trạng thái Đang giao hàng, biến mất khi Giao thành công -->
                     <div class="sx-card p-4 border border-primary border-opacity-25 shadow-sm" style="background: linear-gradient(to bottom, #f0fdf4, #ffffff);">
                         <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom flex-wrap gap-2">
                             <h4 class="fs-5 fw-bold text-primary mb-0 d-flex align-items-center">
@@ -492,7 +492,15 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                 </div>
 
                                 <div id="qr-action-area-detail">
-                                <?php if ($paymentStatus === 'unpaid' && $status !== 'cancelled'): ?>
+                                <?php if ($isPaidStatus): ?>
+                                    <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold border border-success-subtle shadow-xs">
+                                        <i class="bi bi-patch-check-fill me-1 text-success"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng đang được chuẩn bị và giao đến bạn.
+                                    </div>
+                                <?php elseif ($paymentStatus === 'pending_confirm'): ?>
+                                    <div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle shadow-xs">
+                                        <i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin kiểm tra và xác nhận thêm 1 bước</strong> trước khi giao hàng.
+                                    </div>
+                                <?php elseif ($paymentStatus === 'unpaid'): ?>
                                     <form action="<?= BASE_URL ?>?action=confirm-payment" method="post" class="m-0" id="form-qr-confirm-detail">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
                                         <input type="hidden" name="order_id" value="<?= $ordId ?>">
@@ -504,10 +512,6 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                     </form>
                                     <div class="text-muted text-center small mt-2" style="font-size: 0.78rem;">
                                         <i class="bi bi-info-circle me-1"></i>Sau khi quét mã, hệ thống xác nhận ngay phía bạn và chờ Admin đối soát nhận tiền để giao hàng.
-                                    </div>
-                                <?php elseif ($paymentStatus === 'pending_confirm'): ?>
-                                    <div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle shadow-xs">
-                                        <i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin kiểm tra và xác nhận thêm 1 bước</strong> trước khi giao hàng.
                                     </div>
                                 <?php endif; ?>
                                 </div>
