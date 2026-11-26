@@ -17,6 +17,6 @@ spl_autoload_register(function ($class) {
         require_once $fileController;
     }
 });
-/// test
+
 // Điều hướng
 require_once './routes/index.php';
