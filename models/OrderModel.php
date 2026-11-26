@@ -35,6 +35,10 @@ class OrderModel extends BaseModel
         } catch (Throwable $e) {}
 
         try {
+            $this->pdo->exec("ALTER TABLE {$this->table} ADD COLUMN `refund_note` TEXT NULL AFTER `return_image`");
+        } catch (Throwable $e) {}
+
+        try {
             // Tự động đồng bộ: mọi đơn hàng online mà admin đã chuyển sang shipping hoặc completed đều là paid
             $this->pdo->exec("UPDATE {$this->table} SET payment_status = 'paid' WHERE payment_method != 'cod' AND order_status IN ('shipping', 'completed') AND (payment_status IS NULL OR payment_status != 'paid')");
         } catch (Throwable $e) {}
@@ -597,30 +601,54 @@ class OrderModel extends BaseModel
         }
     }
 
-    public function completeReturn($orderId)
+    /**
+     * Hoàn tất hoàn hàng và ghi nhận đã hoàn tiền cho khách (cả COD và Online).
+     *
+     * @param int         $orderId
+     * @param string|null $refundNote Ghi chú xác nhận hoàn tiền (hình thức, mã giao dịch,...)
+     * @return bool
+     */
+    public function completeReturn($orderId, $refundNote = null)
     {
-        $orderId = (int) $orderId;
+        $orderId    = (int) $orderId;
+        $refundNote = $refundNote !== null ? trim((string) $refundNote) : null;
         if ($orderId <= 0) {
             return false;
         }
 
         try {
             $sql = 'UPDATE ' . $this->table . ' '
-                 . 'SET order_status = :status '
+                 . 'SET order_status = :status, payment_status = :p_status, refund_note = :refund_note '
                  . 'WHERE order_id = :id AND order_status = \'return_accepted\'';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':status', 'returned');
+            $statement->bindValue(':p_status', 'refunded');
+            $statement->bindValue(':refund_note', $refundNote);
             $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
             $statement->execute();
 
             return $statement->rowCount() > 0;
         } catch (Throwable $e) {
-            return false;
+            // Fallback nếu chưa có cột refund_note
+            try {
+                $sqlFallback = 'UPDATE ' . $this->table . ' '
+                             . 'SET order_status = :status, payment_status = :p_status '
+                             . 'WHERE order_id = :id AND order_status = \'return_accepted\'';
+                $statement = $this->pdo->prepare($sqlFallback);
+                $statement->bindValue(':status', 'returned');
+                $statement->bindValue(':p_status', 'refunded');
+                $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+                $statement->execute();
+
+                return $statement->rowCount() > 0;
+            } catch (Throwable $e2) {
+                return false;
+            }
         }
     }
 
     /**
-     * Cập nhật trạng thái thanh toán của đơn hàng (unpaid, paid, refunded).
+     * Cập nhật trạng thái thanh toán của đơn hàng (unpaid, pending_confirm, paid, refunded).
      *
      * @param int $orderId
      * @param string $paymentStatus
@@ -629,7 +657,7 @@ class OrderModel extends BaseModel
     public function updatePaymentStatus($orderId, $paymentStatus)
     {
         $orderId = (int) $orderId;
-        $allowed = ['unpaid', 'paid', 'refunded'];
+        $allowed = ['unpaid', 'pending_confirm', 'paid', 'refunded'];
         if ($orderId <= 0 || !in_array($paymentStatus, $allowed, true)) {
             return false;
         }
@@ -641,6 +669,41 @@ class OrderModel extends BaseModel
             $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
 
             return $statement->execute();
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Admin xác nhận đã nhận tiền chuyển khoản khi đơn hàng còn ở trạng thái Chờ xác nhận (pending)
+     * và chuyển đơn sang Đang xử lý (processing).
+     *
+     * @param int $orderId
+     * @return bool
+     */
+    public function confirmPaymentOnly($orderId)
+    {
+        $orderId = (int) $orderId;
+        if ($orderId <= 0) {
+            return false;
+        }
+
+        try {
+            $sql = 'UPDATE ' . $this->table . '
+                    SET payment_status = :p_status, order_status = :o_status
+                    WHERE order_id = :id
+                      AND order_status = :current_status
+                      AND (payment_method IS NULL OR payment_method <> :cod)
+                      AND (payment_status IS NULL OR payment_status IN (\'unpaid\', \'pending_confirm\'))';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':p_status', 'paid');
+            $statement->bindValue(':o_status', 'processing');
+            $statement->bindValue(':current_status', 'pending');
+            $statement->bindValue(':cod', 'cod');
+            $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
+            $statement->execute();
+
+            return $statement->rowCount() > 0;
         } catch (Throwable $e) {
             return false;
         }
@@ -666,13 +729,12 @@ class OrderModel extends BaseModel
                     WHERE order_id = :id
                       AND order_status = :current_status
                       AND (payment_method IS NULL OR payment_method <> :cod)
-                      AND (payment_status IS NULL OR payment_status = :unpaid)';
+                      AND (payment_status IS NULL OR payment_status IN (\'unpaid\', \'pending_confirm\'))';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':p_status', 'paid');
             $statement->bindValue(':o_status', 'shipping');
             $statement->bindValue(':current_status', 'processing');
             $statement->bindValue(':cod', 'cod');
-            $statement->bindValue(':unpaid', 'unpaid');
             $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
             $statement->execute();
 
