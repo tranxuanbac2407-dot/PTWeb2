@@ -35,10 +35,13 @@ $payMethodLabels = [
     'vnpay'   => 'Cổng thanh toán VNPAY',
 ];
 $payStatusLabels = [
-    'unpaid'   => 'Chưa thanh toán',
-    'paid'     => 'Đã thanh toán',
-    'refunded' => 'Đã hoàn tiền',
+    'unpaid'          => 'Chưa thanh toán',
+    'pending_confirm' => 'Khách đã quét QR (Chờ Admin xác nhận)',
+    'paid'            => 'Đã thanh toán',
+    'refunded'        => 'Đã hoàn tiền',
 ];
+$isCodOrder = ($payMethod === 'cod');
+$refundNote = trim((string) ($order['refund_note'] ?? ''));
 ?>
 <div class="admin-return-detail-page">
 
@@ -140,13 +143,20 @@ $payStatusLabels = [
 
                         <div class="admin-return-note">
                             <?php if ($orderStatus === 'return_request'): ?>
-                                Yêu cầu đang chờ xử lý. Chấp nhận yêu cầu không đồng nghĩa với đã hoàn tiền.
+                                <strong>Bước tiếp theo:</strong> Kiểm tra kỹ lý do và ảnh hàng nguyên tem mác. Nếu đồng ý hoàn hàng:
+                                <?= $isCodOrder
+                                    ? 'Đơn <strong>COD</strong> sẽ tiến hành hẹn shipper đến lấy lại hàng và hoàn tiền mặt/chuyển khoản cho khách.'
+                                    : 'Đơn <strong>Thanh toán Online</strong> sẽ tiến hành lấy lại hàng và chuyển khoản hoàn tiền về tài khoản thanh toán ban đầu của khách.' ?>
                             <?php elseif ($orderStatus === 'return_accepted'): ?>
-                                Yêu cầu đã được chấp nhận. Trạng thái thanh toán chưa bị thay đổi; hãy xác nhận đã nhận lại hàng và đối soát khoản tiền hoàn thực tế trước khi bấm "Xác nhận hoàn tất hoàn hàng".
+                                <strong>Đang chờ thu hồi hàng &amp; hoàn tiền (<?= $isCodOrder ? 'Đơn COD' : 'Đơn Thanh toán Online' ?>):</strong>
+                                Vui lòng thực hiện lần lượt 2 bước xác nhận bên dưới sau khi đã nhận lại sản phẩm còn nguyên tem mác và đã hoàn đủ <strong><?= number_format($totalAmount, 0, ',', '.') ?> đ</strong> cho khách.
                             <?php elseif ($orderStatus === 'return_rejected'): ?>
                                 Yêu cầu đã bị từ chối. Không thể duyệt lại yêu cầu này.
                             <?php else: ?>
-                                Yêu cầu đã hoàn tất quy trình hoàn hàng theo dữ liệu hiện có.
+                                Yêu cầu đã hoàn tất quy trình thu hồi hàng và hoàn tiền (Trạng thái thanh toán: <strong><?= htmlspecialchars($payStatusLabels[$payStatus] ?? $payStatus, ENT_QUOTES, 'UTF-8') ?></strong>).
+                                <?php if ($refundNote !== ''): ?>
+                                    <div class="mt-1 text-dark"><strong>Chi tiết hoàn tiền:</strong> <?= htmlspecialchars($refundNote, ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -158,7 +168,7 @@ $payStatusLabels = [
                                 <input type="hidden" name="order_id" value="<?= $orderId ?>">
                                 <button type="submit" class="admin-btn admin-btn-accent">
                                     <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
-                                    Chấp nhận yêu cầu
+                                    Đồng ý hoàn hàng (Bước 1)
                                 </button>
                             </form>
                             <form action="<?= BASE_URL ?>?action=admin-return-reject" method="post">
@@ -171,13 +181,51 @@ $payStatusLabels = [
                             </form>
                         </div>
                     <?php elseif ($orderStatus === 'return_accepted'): ?>
-                        <div class="admin-return-actions">
-                            <form action="<?= BASE_URL ?>?action=admin-return-complete" method="post" onsubmit="return confirm('Bạn xác nhận đã nhận lại hàng từ khách và đã đối soát khoản tiền hoàn theo quy trình thực tế của cửa hàng?\n\nChỉ xác nhận khi các bước này đã hoàn tất. Hệ thống sẽ không tự động chuyển trạng thái thanh toán.');">
+                        <div class="p-3 rounded-3 border bg-light mt-3">
+                            <h5 class="fs-6 fw-bold mb-3 d-flex align-items-center text-dark">
+                                <i class="bi bi-list-check text-accent me-2"></i>
+                                <span>Xác nhận từng bước thu hồi hàng &amp; hoàn tiền (<?= $isCodOrder ? 'COD' : 'Thanh toán Online' ?>)</span>
+                            </h5>
+                            <form action="<?= BASE_URL ?>?action=admin-return-complete" method="post" onsubmit="return confirm('Xác nhận đã nhận lại hàng nguyên tem mác và đã hoàn đủ <?= number_format($totalAmount, 0, ',', '.') ?> đ cho khách hàng?');">
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                 <input type="hidden" name="order_id" value="<?= $orderId ?>">
-                                <button type="submit" class="admin-btn admin-btn-accent">
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="confirm_received" value="1" id="confirm_received" required>
+                                    <label class="form-check-label small fw-semibold text-dark" for="confirm_received">
+                                        Bước 1: Đã thu hồi lại sản phẩm từ khách và kiểm tra còn nguyên vẹn, còn nguyên tem mác.
+                                    </label>
+                                </div>
+
+                                <div class="mb-3 mt-3">
+                                    <label for="refund_method" class="form-label small fw-semibold text-dark mb-1">
+                                        Hình thức hoàn tiền (<?= $isCodOrder ? 'Đơn COD' : 'Đơn Thanh toán Online' ?>):
+                                    </label>
+                                    <select class="form-select form-select-sm" name="refund_method" id="refund_method" required>
+                                        <?php if ($isCodOrder): ?>
+                                            <option value="Hoàn tiền mặt trực tiếp cho khách khi shipper thu hồi hàng (COD)">Hoàn tiền mặt trực tiếp khi shipper thu hồi hàng (COD)</option>
+                                            <option value="Chuyển khoản ngân hàng hoàn tiền đơn COD cho khách">Chuyển khoản ngân hàng hoàn tiền cho khách (COD)</option>
+                                        <?php else: ?>
+                                            <option value="Chuyển khoản hoàn tiền về tài khoản ngân hàng / ví MoMo khách đã thanh toán">Chuyển khoản hoàn tiền về tài khoản ngân hàng / ví MoMo ban đầu</option>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="confirm_refunded" value="1" id="confirm_refunded" required>
+                                    <label class="form-check-label small fw-semibold text-dark" for="confirm_refunded">
+                                        Bước 2: Đã hoàn đủ số tiền <strong><?= number_format($totalAmount, 0, ',', '.') ?> đ</strong> cho khách hàng theo hình thức trên.
+                                    </label>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="refund_note" class="form-label small text-muted mb-1">Ghi chú / Mã giao dịch hoàn tiền (nếu có):</label>
+                                    <input type="text" class="form-control form-control-sm" name="refund_note" id="refund_note" placeholder="VD: Đã CK Vietcombank lúc 14:30 - Mã GD FT2611...">
+                                </div>
+
+                                <button type="submit" class="admin-btn admin-btn-accent w-100 justify-content-center">
                                     <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>
-                                    Xác nhận hoàn tất hoàn hàng
+                                    Xác nhận đã thu hồi hàng &amp; Hoàn tiền thành công
                                 </button>
                             </form>
                         </div>

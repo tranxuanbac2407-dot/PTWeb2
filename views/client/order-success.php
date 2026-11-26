@@ -173,11 +173,15 @@ $qrUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH'
                             <h2 class="fs-5 fw-bold text-primary mb-0 d-flex align-items-center">
                                 <i class="bi bi-qr-code-scan me-2 fs-4"></i>Mã QR thanh toán Online
                             </h2>
+                            <span id="qr-status-badge-success">
                             <?php if ($paymentStatus === 'paid'): ?>
                                 <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                            <?php elseif ($paymentStatus === 'pending_confirm'): ?>
+                                <span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-qr-code-scan me-1"></i>Đã thanh toán QR (Chờ Admin xác nhận)</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ quét mã thanh toán</span>
                             <?php endif; ?>
+                            </span>
                         </div>
 
                         <div class="row g-4 align-items-center">
@@ -239,24 +243,30 @@ $qrUrl = function_exists('get_vietqr_url') ? get_vietqr_url($total, 'SPORTIX DH'
                                     </div>
                                 </div>
 
-                                <?php if ($paymentStatus !== 'paid'): ?>
-                                    <form action="<?= BASE_URL ?>?action=confirm-payment" method="post" class="m-0">
+                                <div id="qr-action-area-success">
+                                <?php if ($paymentStatus === 'unpaid'): ?>
+                                    <form action="<?= BASE_URL ?>?action=confirm-payment" method="post" class="m-0" id="form-qr-confirm-success">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                                         <input type="hidden" name="order_id" value="<?= $ordId ?>">
                                         <input type="hidden" name="return_to" value="success">
-                                        <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-check2-circle me-2 fs-5"></i>
-                                            <span>Tôi đã chuyển khoản xong</span>
+                                        <button type="button" onclick="confirmQrPaymentAjax('form-qr-confirm-success', 'qr-action-area-success', 'qr-status-badge-success', this)" class="btn btn-success w-100 py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-qr-code-scan me-2 fs-5"></i>
+                                            <span>Tôi đã quét QR &amp; Thanh toán xong</span>
                                         </button>
                                     </form>
                                     <div class="text-muted text-center small mt-2" style="font-size: 0.78rem;">
-                                        <i class="bi bi-info-circle me-1"></i>Đơn hàng online chỉ được giao sau khi đã thanh toán thành công và admin xác nhận.
+                                        <i class="bi bi-info-circle me-1"></i>Sau khi quét mã thanh toán, hệ thống sẽ ghi nhận ngay và chuyển sang bước Admin xác nhận nhận tiền trước khi giao hàng.
+                                    </div>
+                                <?php elseif ($paymentStatus === 'pending_confirm'): ?>
+                                    <div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle">
+                                        <i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin đối soát xác nhận</strong> tiền về tài khoản để tiến hành giao hàng.
                                     </div>
                                 <?php else: ?>
                                     <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold">
                                         <i class="bi bi-patch-check-fill me-1"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng sẽ được giao đến bạn sớm nhất.
                                     </div>
                                 <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -373,5 +383,41 @@ function showCopyFeedback(btnElement) {
         btnElement.classList.remove('btn-success', 'text-white');
         btnElement.classList.add(origHtml.includes('primary') ? 'btn-outline-primary' : 'btn-outline-secondary');
     }, 1800);
+}
+
+function confirmQrPaymentAjax(formId, areaId, badgeId, btnEl) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xác nhận thanh toán...';
+    }
+    const formData = new FormData(form);
+    formData.append('ajax', '1');
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data && data.success) {
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                badge.innerHTML = '<span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-qr-code-scan me-1"></i>Đã thanh toán QR (Chờ Admin xác nhận)</span>';
+            }
+            const area = document.getElementById(areaId);
+            if (area) {
+                area.innerHTML = '<div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle">'
+                    + '<i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin đối soát xác nhận</strong> tiền về tài khoản để tiến hành giao hàng.'
+                    + '</div>';
+            }
+        } else {
+            form.submit();
+        }
+    })
+    .catch(function() {
+        form.submit();
+    });
 }
 </script>

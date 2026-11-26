@@ -107,77 +107,133 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         <small>Nếu bạn có thắc mắc hoặc cần hỗ trợ đặt lại, vui lòng liên hệ hotline SPORTIX: 1900 8888.</small>
                     </div>
                 </div>
-            <?php elseif ($status === 'return_request'): ?>
-                <div class="alert alert-warning mb-0 p-3 rounded-3 shadow-sm border border-warning-subtle">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-arrow-counterclockwise fs-2 me-3 text-warning flex-shrink-0"></i>
-                        <div class="flex-grow-1">
-                            <h6 class="fw-bold mb-1 text-dark">Đơn hàng đang chờ xử lý yêu cầu hoàn hàng</h6>
-                            <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
-                            <small class="text-muted d-block">SPORTIX đã tiếp nhận yêu cầu và ảnh xác nhận hàng còn nguyên vẹn, còn tem mác. Nhân viên CSKH sẽ liên hệ xác nhận hoàn tiền và điều phối đến lấy lại hàng trong vòng 24 giờ làm việc.</small>
+            <?php elseif (in_array($status, ['return_request', 'return_accepted', 'return_rejected', 'returned'], true)): ?>
+                <?php
+                    $retStep = match ($status) {
+                        'return_request'  => 1,
+                        'return_accepted' => 2,
+                        'return_rejected' => 2,
+                        'returned'        => 4,
+                        default           => 1,
+                    };
+                    $isOrderRefunded = (($order['payment_status'] ?? '') === 'refunded');
+                    $refundMethodHint = ($order['payment_method'] ?? 'cod') === 'cod'
+                        ? 'Hoàn tiền mặt trực tiếp khi nhân viên đến lấy lại hàng hoặc chuyển khoản ngân hàng theo thông tin khách cung cấp.'
+                        : 'Chuyển khoản hoàn tiền trực tiếp về tài khoản ngân hàng / ví điện tử khách đã thanh toán ban đầu.';
+                ?>
+                <!-- Tiến trình 4 bước Hoàn hàng & Hoàn tiền -->
+                <div class="order-stepper d-flex justify-content-between position-relative flex-wrap gap-3 mb-4 pb-3 border-bottom">
+                    <div class="step-item text-center flex-fill step-active">
+                        <div class="step-icon rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center bg-warning text-dark" style="width: 42px; height: 42px;">
+                            <i class="bi bi-camera-fill fs-5"></i>
+                        </div>
+                        <div class="fw-bold small">1. Gửi yêu cầu</div>
+                        <div class="text-muted small">Đã gửi ảnh tem mác</div>
+                    </div>
 
-                            <?php if (!empty($order['return_image'])): ?>
-                                <div class="mt-3 pt-2 border-top border-warning-subtle d-flex align-items-center gap-3">
-                                    <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-warning me-1"></i>Ảnh hàng còn nguyên tem mác:</span>
-                                    <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
-                                        <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác khi hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
-                                    </a>
-                                </div>
-                            <?php endif; ?>
+                    <div class="step-item text-center flex-fill <?= $retStep >= 2 ? 'step-active' : '' ?>">
+                        <div class="step-icon rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center <?= $status === 'return_rejected' ? 'bg-danger text-white' : ($retStep >= 2 ? 'bg-info text-white' : 'bg-light text-muted border') ?>" style="width: 42px; height: 42px;">
+                            <i class="bi <?= $status === 'return_rejected' ? 'bi-x-lg' : 'bi-clipboard-check' ?> fs-5"></i>
                         </div>
+                        <div class="fw-bold small"><?= $status === 'return_rejected' ? '2. Từ chối hoàn' : '2. Duyệt & Lấy hàng' ?></div>
+                        <div class="text-muted small"><?= $status === 'return_rejected' ? 'Không đủ điều kiện' : 'Kiểm tra tem mác' ?></div>
                     </div>
-                </div>
-            <?php elseif ($status === 'return_accepted'): ?>
-                <div class="alert alert-info mb-0 p-3 rounded-3 shadow-sm border border-info-subtle">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-check2-circle fs-2 me-3 text-info flex-shrink-0"></i>
-                        <div class="flex-grow-1">
-                            <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã được chấp nhận</h6>
-                            <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
-                            <small class="text-muted d-block">Nhân viên SPORTIX sẽ liên hệ để điều phối kiểm tra hàng và đối soát khoản thanh toán. Trạng thái thanh toán của đơn chưa tự động đổi.</small>
 
-                            <?php if (!empty($order['return_image'])): ?>
-                                <div class="mt-3 pt-2 border-top border-info-subtle d-flex align-items-center gap-3">
-                                    <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-info me-1"></i>Ảnh hàng khi gửi yêu cầu:</span>
-                                    <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
-                                        <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác khi hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
-                                    </a>
-                                </div>
-                            <?php endif; ?>
+                    <div class="step-item text-center flex-fill <?= $retStep >= 4 ? 'step-active' : '' ?>">
+                        <div class="step-icon rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center <?= $retStep >= 4 ? 'bg-primary text-white' : 'bg-light text-muted border' ?>" style="width: 42px; height: 42px;">
+                            <i class="bi bi-box-arrow-in-left fs-5"></i>
                         </div>
+                        <div class="fw-bold small">3. Đã thu hồi hàng</div>
+                        <div class="text-muted small">Hàng nguyên vẹn</div>
                     </div>
-                </div>
-            <?php elseif ($status === 'return_rejected'): ?>
-                <div class="alert alert-danger mb-0 p-3 rounded-3 shadow-sm border border-danger-subtle">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-x-circle-fill fs-2 me-3 text-danger flex-shrink-0"></i>
-                        <div class="flex-grow-1">
-                            <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã bị từ chối</h6>
-                            <p class="mb-1 small">Lý do đã gửi: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
-                            <small class="text-muted d-block">Yêu cầu hoàn hàng của bạn không được chấp nhận. Nếu cần hỗ trợ thêm, vui lòng liên hệ SPORTIX qua hotline 1900 8888.</small>
-                        </div>
-                    </div>
-                </div>
-            <?php elseif ($status === 'returned'): ?>
-                <div class="alert alert-secondary mb-0 p-3 rounded-3 shadow-sm border border-secondary-subtle">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-arrow-return-left fs-2 me-3 text-secondary flex-shrink-0"></i>
-                        <div class="flex-grow-1">
-                            <h6 class="fw-bold mb-1 text-dark">Hoàn tất hoàn hàng</h6>
-                            <p class="mb-1 small">Ghi chú: <?= htmlspecialchars($order['return_reason'] ?? 'Đã tiếp nhận hàng và hoàn tất xử lý.', ENT_QUOTES, 'UTF-8') ?></p>
-                            <small class="text-muted d-block">SPORTIX đã kiểm tra tem mác, hoàn tất lấy lại hàng và đối soát khoản tiền hoàn theo quy trình thực tế.</small>
 
-                            <?php if (!empty($order['return_image'])): ?>
-                                <div class="mt-3 pt-2 border-top border-secondary-subtle d-flex align-items-center gap-3">
-                                    <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-secondary me-1"></i>Ảnh hàng hoàn trả:</span>
-                                    <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
-                                        <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
-                                    </a>
-                                </div>
-                            <?php endif; ?>
+                    <div class="step-item text-center flex-fill <?= ($retStep >= 4 && $isOrderRefunded) ? 'step-active' : '' ?>">
+                        <div class="step-icon rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center <?= ($retStep >= 4 && $isOrderRefunded) ? 'bg-success text-white' : 'bg-light text-muted border' ?>" style="width: 42px; height: 42px;">
+                            <i class="bi bi-cash-coin fs-5"></i>
                         </div>
+                        <div class="fw-bold small">4. Hoàn tiền</div>
+                        <div class="text-muted small"><?= $isOrderRefunded ? 'Đã hoàn tiền' : 'Chờ đối soát' ?></div>
                     </div>
                 </div>
+
+                <?php if ($status === 'return_request'): ?>
+                    <div class="alert alert-warning mb-0 p-3 rounded-3 shadow-sm border border-warning-subtle">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-arrow-counterclockwise fs-2 me-3 text-warning flex-shrink-0"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1 text-dark">Đơn hàng đang chờ Admin duyệt yêu cầu hoàn hàng</h6>
+                                <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                                <small class="text-muted d-block mb-1">SPORTIX đã tiếp nhận yêu cầu và ảnh xác nhận hàng còn nguyên vẹn, còn tem mác.</small>
+                                <small class="text-dark d-block"><i class="bi bi-cash-stack me-1 text-warning"></i><strong>Quy trình hoàn tiền dự kiến:</strong> <?= $refundMethodHint ?></small>
+
+                                <?php if (!empty($order['return_image'])): ?>
+                                    <div class="mt-3 pt-2 border-top border-warning-subtle d-flex align-items-center gap-3">
+                                        <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-warning me-1"></i>Ảnh hàng còn nguyên tem mác:</span>
+                                        <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
+                                            <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác khi hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif ($status === 'return_accepted'): ?>
+                    <div class="alert alert-info mb-0 p-3 rounded-3 shadow-sm border border-info-subtle">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-check2-circle fs-2 me-3 text-info flex-shrink-0"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã được chấp nhận — Đang hẹn thu hồi hàng</h6>
+                                <p class="mb-1 small">Lý do hoàn hàng: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                                <small class="text-muted d-block mb-1">Nhân viên giao nhận SPORTIX sẽ liên hệ đến địa chỉ của bạn để lấy lại hàng còn nguyên tem mác.</small>
+                                <small class="text-dark d-block"><i class="bi bi-cash-stack me-1 text-info"></i><strong>Phương thức hoàn tiền sau khi thu hồi:</strong> <?= $refundMethodHint ?></small>
+
+                                <?php if (!empty($order['return_image'])): ?>
+                                    <div class="mt-3 pt-2 border-top border-info-subtle d-flex align-items-center gap-3">
+                                        <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-info me-1"></i>Ảnh hàng khi gửi yêu cầu:</span>
+                                        <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
+                                            <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác khi hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif ($status === 'return_rejected'): ?>
+                    <div class="alert alert-danger mb-0 p-3 rounded-3 shadow-sm border border-danger-subtle">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-x-circle-fill fs-2 me-3 text-danger flex-shrink-0"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1 text-dark">Yêu cầu hoàn hàng đã bị từ chối</h6>
+                                <p class="mb-1 small">Lý do đã gửi: <strong><?= htmlspecialchars($order['return_reason'] ?? 'Chưa ghi chú lý do', ENT_QUOTES, 'UTF-8') ?></strong></p>
+                                <small class="text-muted d-block">Yêu cầu hoàn hàng của bạn không đủ điều kiện chấp nhận. Nếu cần hỗ trợ thêm, vui lòng liên hệ SPORTIX qua hotline 1900 8888.</small>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif ($status === 'returned'): ?>
+                    <div class="alert alert-success mb-0 p-3 rounded-3 shadow-sm border border-success-subtle">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-patch-check-fill fs-2 me-3 text-success flex-shrink-0"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1 text-success">Hoàn tất thu hồi hàng &amp; Hoàn tiền thành công</h6>
+                                <p class="mb-1 small">Lý do hoàn: <?= htmlspecialchars($order['return_reason'] ?? 'Đã tiếp nhận hàng và hoàn tất xử lý.', ENT_QUOTES, 'UTF-8') ?></p>
+                                <?php if (!empty($order['refund_note'])): ?>
+                                    <p class="mb-1 small text-dark"><strong><i class="bi bi-cash-coin me-1 text-success"></i>Chi tiết hoàn tiền:</strong> <?= htmlspecialchars($order['refund_note'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <?php else: ?>
+                                    <small class="text-muted d-block">SPORTIX đã kiểm tra tem mác, hoàn tất lấy lại hàng và hoàn tiền cho quý khách.</small>
+                                <?php endif; ?>
+
+                                <?php if (!empty($order['return_image'])): ?>
+                                    <div class="mt-3 pt-2 border-top border-success-subtle d-flex align-items-center gap-3">
+                                        <span class="small fw-semibold text-dark"><i class="bi bi-tag-fill text-success me-1"></i>Ảnh hàng hoàn trả:</span>
+                                        <a href="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer" class="d-inline-block border rounded p-1 bg-white shadow-xs text-decoration-none" title="Bấm để xem ảnh lớn">
+                                            <img src="<?= htmlspecialchars(get_product_image_url($order['return_image']), ENT_QUOTES, 'UTF-8') ?>" alt="Ảnh tem mác hoàn hàng" style="height: 52px; width: 52px; object-fit: cover; border-radius: 4px;">
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             <?php else: ?>
                 <div class="order-stepper d-flex justify-content-between position-relative flex-wrap gap-3">
                     <?php
@@ -354,11 +410,15 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                             <h4 class="fs-5 fw-bold text-primary mb-0 d-flex align-items-center">
                                 <i class="bi bi-qr-code-scan me-2 fs-4"></i>Mã VietQR thanh toán tự động
                             </h4>
+                            <span id="qr-status-badge-detail">
                             <?php if ($isPaidStatus): ?>
                                 <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
+                            <?php elseif ($paymentStatus === 'pending_confirm'): ?>
+                                <span class="badge bg-info text-dark px-3 py-2 fs-6"><i class="bi bi-qr-code-scan me-1"></i>Đã thanh toán QR (Chờ Admin xác nhận)</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark px-3 py-2 fs-6"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                                <span class="badge bg-warning text-dark px-3 py-2 fs-6"><i class="bi bi-hourglass-split me-1"></i>Chờ quét mã thanh toán</span>
                             <?php endif; ?>
+                            </span>
                         </div>
 
                         <div class="row g-4 align-items-center">
@@ -420,21 +480,30 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                     </div>
                                 </div>
 
-                                <?php if (!$isPaidStatus && $status !== 'cancelled'): ?>
-                                    <form action="<?= BASE_URL ?>?action=confirm-payment" method="post" class="m-0">
+                                <div id="qr-action-area-detail">
+                                <?php if ($paymentStatus === 'unpaid' && $status !== 'cancelled'): ?>
+                                    <form action="<?= BASE_URL ?>?action=confirm-payment" method="post" class="m-0" id="form-qr-confirm-detail">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '', ENT_QUOTES, 'UTF-8') ?>">
                                         <input type="hidden" name="order_id" value="<?= $ordId ?>">
                                         <input type="hidden" name="return_to" value="detail">
-                                        <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-check2-circle me-2 fs-5"></i>
-                                            <span>Tôi đã hoàn tất chuyển khoản</span>
+                                        <button type="button" onclick="confirmQrPaymentAjax('form-qr-confirm-detail', 'qr-action-area-detail', 'qr-status-badge-detail', this)" class="btn btn-success w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-qr-code-scan me-2 fs-5"></i>
+                                            <span>Tôi đã quét QR &amp; Thanh toán xong</span>
                                         </button>
                                     </form>
-                                <?php else: ?>
+                                    <div class="text-muted text-center small mt-2" style="font-size: 0.78rem;">
+                                        <i class="bi bi-info-circle me-1"></i>Sau khi quét mã, hệ thống xác nhận ngay phía bạn và chờ Admin đối soát nhận tiền để giao hàng.
+                                    </div>
+                                <?php elseif ($paymentStatus === 'pending_confirm'): ?>
+                                    <div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle shadow-xs">
+                                        <i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin kiểm tra và xác nhận thêm 1 bước</strong> trước khi giao hàng.
+                                    </div>
+                                <?php elseif ($isPaidStatus): ?>
                                     <div class="alert alert-success py-2 px-3 mb-0 text-center small fw-semibold border border-success-subtle shadow-xs">
                                         <i class="bi bi-patch-check-fill me-1 text-success"></i> Admin đã xác nhận thanh toán thành công! Kiện hàng đang được giao đến bạn.
                                     </div>
                                 <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -456,13 +525,15 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Trạng thái TT:</span>
-                        <?php if ($isOnlineMethod): ?>
+                        <?php if (($order['payment_status'] ?? '') === 'refunded'): ?>
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                        <?php elseif ($isOnlineMethod): ?>
                             <?php if ($isPaidStatus): ?>
                                 <span class="badge bg-success text-white px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán thành công</span>
-                            <?php elseif (($order['payment_status'] ?? '') === 'refunded'): ?>
-                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-arrow-return-left me-1"></i>Đã hoàn tiền</span>
+                            <?php elseif (($order['payment_status'] ?? '') === 'pending_confirm'): ?>
+                                <span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-qr-code-scan me-1"></i>Đã quét QR (Chờ Admin)</span>
                             <?php else: ?>
-                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ xác nhận thanh toán</span>
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ quét mã thanh toán</span>
                             <?php endif; ?>
                         <?php else: ?>
                             <?php if ($status === 'completed'): ?>
@@ -695,4 +766,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function confirmQrPaymentAjax(formId, areaId, badgeId, btnEl) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xác nhận thanh toán...';
+    }
+    const formData = new FormData(form);
+    formData.append('ajax', '1');
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data && data.success) {
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                badge.innerHTML = '<span class="badge bg-info text-dark px-3 py-2 fs-6"><i class="bi bi-qr-code-scan me-1"></i>Đã thanh toán QR (Chờ Admin xác nhận)</span>';
+            }
+            const area = document.getElementById(areaId);
+            if (area) {
+                area.innerHTML = '<div class="alert alert-info py-2 px-3 mb-0 text-center small fw-semibold border border-info-subtle shadow-xs">'
+                    + '<i class="bi bi-check2-circle me-1 text-primary"></i> Bạn đã thanh toán qua mã QR! Đơn hàng đang chờ <strong>Admin kiểm tra và xác nhận thêm 1 bước</strong> trước khi giao hàng.'
+                    + '</div>';
+            }
+        } else {
+            form.submit();
+        }
+    })
+    .catch(function() {
+        form.submit();
+    });
+}
 </script>
