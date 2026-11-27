@@ -2081,28 +2081,42 @@
     border-color: #b91c1c;
 }
 
-.admin-variant-table > :not(caption) > * > * {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.85rem;
+.admin-variant-matrix {
+    min-width: 480px;
+}
+
+.admin-variant-matrix > :not(caption) > * > * {
+    padding: 0.55rem 0.75rem;
     vertical-align: middle;
+    font-variant-numeric: tabular-nums;
 }
 
-.admin-variant-table thead th {
-    font-size: 0.75rem;
+.admin-variant-matrix thead th {
     font-weight: 700;
+    white-space: nowrap;
+}
+
+.admin-variant-matrix tbody th {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-variant-matrix .admin-variant-matrix-label {
+    background-color: #f8fafc;
+}
+
+.admin-variant-matrix .admin-variant-matrix-qty,
+.admin-variant-matrix .admin-variant-matrix-total {
+    text-align: right;
+}
+
+.admin-variant-matrix .admin-variant-matrix-total {
+    font-weight: 700;
+    background-color: #f8fafc;
+}
+
+.admin-variant-matrix .admin-variant-matrix-empty {
     color: var(--sx-muted);
-    background-color: #f8fafc;
-    white-space: nowrap;
-}
-
-.admin-variant-table tfoot th {
-    background-color: #f8fafc;
-}
-
-.admin-variant-table .badge {
-    padding: 0.15rem 0.4rem;
-    font-size: 0.7rem;
-    white-space: nowrap;
 }
 
 @media (max-width: 991.98px) {

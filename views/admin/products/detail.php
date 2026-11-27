@@ -15,6 +15,61 @@ $description  = trim((string) ($product['description'] ?? ''));
 $imageUrl     = get_product_image_url($product['image'] ?? null);
 $sizeValue    = trim((string) ($product['size'] ?? ''));
 $colorValue   = trim((string) ($product['color'] ?? ''));
+
+$sizeColumns = [];
+$colorRows   = [];
+$stockMatrix = [];
+$colorTotals = [];
+
+foreach ($variants as $variant) {
+    $color = trim((string) ($variant['color'] ?? ''));
+    $size  = trim((string) ($variant['size'] ?? ''));
+    $stock = (int) ($variant['stock_quantity'] ?? 0);
+
+    if ($color === '') {
+        $color = '—';
+    }
+    if ($size === '') {
+        $size = '—';
+    }
+
+    $colorRows[$color]   = $color;
+    $sizeColumns[$size]  = $size;
+    $stockMatrix[$color][$size] = $stock;
+    $colorTotals[$color] = ($colorTotals[$color] ?? 0) + $stock;
+}
+
+$apparelSizeOrder = ['S' => 1, 'M' => 2, 'L' => 3, 'XL' => 4, 'XXL' => 5];
+$sortedSizes = array_values($sizeColumns);
+usort($sortedSizes, static function ($left, $right) use ($apparelSizeOrder) {
+    $normalizedLeft  = strtoupper(trim((string) $left));
+    $normalizedRight = strtoupper(trim((string) $right));
+
+    $rank = static function ($size) use ($apparelSizeOrder) {
+        $normalized = strtoupper(trim((string) $size));
+        if (isset($apparelSizeOrder[$normalized])) {
+            return [$apparelSizeOrder[$normalized], 0.0];
+        }
+        if (is_numeric($normalized)) {
+            return [1000, (float) $normalized];
+        }
+        return [2000, 0.0];
+    };
+
+    [$leftRank, $leftValue] = $rank($left);
+    [$rightRank, $rightValue] = $rank($right);
+
+    if ($leftRank !== $rightRank) {
+        return $leftRank <=> $rightRank;
+    }
+    if ($leftRank === 1000 && $leftValue !== $rightValue) {
+        return $leftValue <=> $rightValue;
+    }
+
+    return strnatcasecmp($normalizedLeft, $normalizedRight);
+});
+$sizeColumns = $sortedSizes;
+$matrixTotal = array_sum($colorTotals);
 ?>
 <div class="admin-product-detail-page">
 
@@ -116,11 +171,8 @@ $colorValue   = trim((string) ($product['color'] ?? ''));
     </div>
 
     <div class="admin-card mb-4">
-        <div class="admin-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h3><i class="bi bi-grid-3x3-gap me-1" aria-hidden="true"></i> Tồn kho theo biến thể</h3>
-            <?php if (!empty($variants)): ?>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Tổng: <?= $totalStock ?></span>
-            <?php endif; ?>
+        <div class="admin-card-header">
+            <h3><i class="bi bi-grid-3x3-gap me-1" aria-hidden="true"></i> Tồn kho theo màu &amp; size</h3>
         </div>
         <div class="admin-card-body">
             <?php if (empty($variants)): ?>
@@ -130,43 +182,34 @@ $colorValue   = trim((string) ($product['color'] ?? ''));
                 </div>
             <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-0 admin-variant-table">
-                        <thead>
+                    <table class="table table-bordered align-middle mb-0 admin-variant-matrix">
+                        <thead class="table-light">
                             <tr>
-                                <th class="text-center" style="width: 80px;">Mã</th>
-                                <th style="width: 28%;">Màu</th>
-                                <th style="width: 20%;">Size</th>
-                                <th class="text-end" style="width: 110px;">Tồn kho</th>
-                                <th class="text-center" style="width: 130px;">Trạng thái</th>
+                                <th scope="col" class="admin-variant-matrix-label">Màu</th>
+                                <?php foreach ($sizeColumns as $size): ?>
+                                    <th scope="col" class="text-end"><?= htmlspecialchars($size, ENT_QUOTES, 'UTF-8') ?></th>
+                                <?php endforeach; ?>
+                                <th scope="col" class="text-end">Tổng</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($variants as $variant): ?>
-                                <?php $isActive = (int) ($variant['is_active'] ?? 1) === 1; ?>
+                            <?php foreach ($colorRows as $color): ?>
                                 <tr>
-                                    <td class="text-center">#<?= (int) ($variant['variant_id'] ?? 0) ?></td>
-                                    <td><?= htmlspecialchars((string) ($variant['color'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                                    <td><?= htmlspecialchars((string) ($variant['size'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                                    <td class="text-end"><strong><?= (int) ($variant['stock_quantity'] ?? 0) ?></strong></td>
-                                    <td class="text-center">
-                                        <?php if ($isActive): ?>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Đang dùng</span>
+                                    <th scope="row" class="admin-variant-matrix-label"><?= htmlspecialchars($color, ENT_QUOTES, 'UTF-8') ?></th>
+                                    <?php foreach ($sizeColumns as $size): ?>
+                                        <?php if (array_key_exists($size, $stockMatrix[$color] ?? [])): ?>
+                                            <td class="text-end admin-variant-matrix-qty"><?= (int) $stockMatrix[$color][$size] ?></td>
                                         <?php else: ?>
-                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Ngừng dùng</span>
+                                            <td class="text-end admin-variant-matrix-empty">—</td>
                                         <?php endif; ?>
-                                    </td>
+                                    <?php endforeach; ?>
+                                    <td class="text-end admin-variant-matrix-total"><?= (int) ($colorTotals[$color] ?? 0) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
-                        <tfoot>
-                            <tr>
-                                <th colspan="3" class="text-end">Tổng tồn kho</th>
-                                <th class="text-end"><?= $totalStock ?></th>
-                                <th></th>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
+                <div class="mt-3 text-end fw-semibold">Tổng tồn kho: <strong><?= $matrixTotal ?></strong></div>
             <?php endif; ?>
         </div>
     </div>
