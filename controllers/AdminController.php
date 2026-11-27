@@ -775,8 +775,8 @@ class AdminController extends BaseController
                         delete_upload_file($product['image']);
                     }
 
-                    $this->setFlash('success', 'Cập nhật sản phẩm #' . $id . ' thành công!');
-                    $this->redirect('?action=admin-products');
+                    $this->setFlash('success', 'Cập nhật sản phẩm thành công.');
+                    $this->redirect('?action=admin-product-edit&id=' . $id);
                 } catch (Throwable $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
@@ -789,8 +789,9 @@ class AdminController extends BaseController
             }
         }
 
-        $csrfToken  = $this->csrfToken();
-        $flashError = $this->getFlash('error');
+        $csrfToken    = $this->csrfToken();
+        $flashSuccess = $this->getFlash('success');
+        $flashError   = $this->getFlash('error');
 
         $this->renderAdminPage(
             'products/form',
@@ -806,6 +807,7 @@ class AdminController extends BaseController
                 'variantStocks' => $variantStocks,
                 'errors'        => $errors,
                 'csrfToken'     => $csrfToken,
+                'flashSuccess'  => $flashSuccess,
                 'flashError'    => $flashError,
             ]
         );

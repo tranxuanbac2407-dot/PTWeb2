@@ -6,8 +6,9 @@ $product    = $product ?? null;
 $categories = $categories ?? [];
 $old        = $old ?? [];
 $errors     = $errors ?? [];
-$csrfToken  = $csrfToken ?? '';
-$flashError = $flashError ?? null;
+$csrfToken    = $csrfToken ?? '';
+$flashSuccess = $flashSuccess ?? null;
+$flashError   = $flashError ?? null;
 
 $pId = $product ? (int) ($product['product_id'] ?? 0) : 0;
 $formAction = $isEdit
@@ -63,6 +64,13 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
             <span>Quay lại danh sách sản phẩm</span>
         </a>
     </div>
+
+    <?php if (!empty($flashSuccess)): ?>
+        <div class="admin-alert admin-alert-success" role="alert">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+            <span><?= htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+    <?php endif; ?>
 
     <!-- Thông báo lỗi chung nếu có -->
     <?php if (!empty($flashError)): ?>
