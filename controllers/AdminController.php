@@ -28,7 +28,10 @@ class AdminController extends BaseController
             if ($color === '' || $size === '') {
                 return [[], 'Màu và size của biến thể không được để trống.'];
             }
-            if ($stock === '' || !is_numeric($stock) || (int) $stock < 0) {
+            if ($stock === '') {
+                $stock = '0';
+            }
+            if (preg_match('/^\d+$/', $stock) !== 1) {
                 return [[], 'Tồn kho của biến thể ' . $color . ' - ' . $size . ' phải là số nguyên không âm.'];
             }
 
@@ -52,6 +55,30 @@ class AdminController extends BaseController
         $map = [];
         foreach ($rows as $row) {
             $map[normalize_variant_value($row['color'] ?? '') . '|' . normalize_variant_value($row['size'] ?? '')] = (int) ($row['stock'] ?? 0);
+        }
+
+        return $map;
+    }
+
+    private function buildVariantStockInputMap()
+    {
+        $colors = $_POST['variant_color'] ?? [];
+        $sizes  = $_POST['variant_size'] ?? [];
+        $stocks = $_POST['variant_stock'] ?? [];
+
+        if (!is_array($colors) || !is_array($sizes) || !is_array($stocks)) {
+            return [];
+        }
+
+        $map   = [];
+        $count = min(count($colors), count($sizes), count($stocks));
+        for ($i = 0; $i < $count; $i++) {
+            $color = normalize_variant_value($colors[$i] ?? '');
+            $size  = normalize_variant_value($sizes[$i] ?? '');
+            if ($color === '' || $size === '') {
+                continue;
+            }
+            $map[$color . '|' . $size] = trim((string) ($stocks[$i] ?? ''));
         }
 
         return $map;
@@ -464,7 +491,7 @@ class AdminController extends BaseController
             $old['image_url']    = trim($_POST['image_url'] ?? '');
 
             [$variantRows, $variantError] = $this->parseVariantStockInput();
-            $variantStocks = $this->buildVariantStockMap($variantRows);
+            $variantStocks = $this->buildVariantStockInputMap();
 
             if (!$this->csrfValid()) {
                 $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';
@@ -650,7 +677,7 @@ class AdminController extends BaseController
             $deleteImage         = !empty($_POST['delete_image']);
 
             [$variantRows, $variantError] = $this->parseVariantStockInput();
-            $variantStocks = $this->buildVariantStockMap($variantRows);
+            $variantStocks = array_replace($variantStocks, $this->buildVariantStockInputMap());
 
             if (!$this->csrfValid()) {
                 $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';

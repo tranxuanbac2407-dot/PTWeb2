@@ -697,10 +697,11 @@ document.addEventListener('DOMContentLoaded', function () {
             sizes.forEach(function (size) {
                 const key = color + '|' + size;
                 let stock = 0;
+                if (Object.prototype.hasOwnProperty.call(variantStocks, key)) {
+                    stock = variantStocks[key];
+                }
                 if (Object.prototype.hasOwnProperty.call(currentStocks, key)) {
                     stock = currentStocks[key];
-                } else if (Object.prototype.hasOwnProperty.call(variantStocks, key)) {
-                    stock = variantStocks[key];
                 }
                 html += '<td>'
                      + '<input type="hidden" name="variant_color[]" value="' + escapeHtml(color) + '">'
