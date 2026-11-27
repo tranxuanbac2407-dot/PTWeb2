@@ -90,7 +90,8 @@ class HomeController extends BaseController
             exit;
         }
 
-        $productModel = new ProductModel();
+        $productModel  = new ProductModel();
+        $variantModel  = new ProductVariantModel();
         $product = $productModel->getById($id);
 
         if (!$product) {
@@ -99,18 +100,31 @@ class HomeController extends BaseController
             exit;
         }
 
-        $sizes = parse_product_size_values($product['size'] ?? '');
+        $variants   = $variantModel->getByProduct($id);
+        $variantMap = [];
+        $sizes      = [];
+        $colors     = [];
 
-        // Parse danh sách màu sắc (Color)
-        $colors = [];
-        if (!empty($product['color'])) {
-            $rawColors = explode(',', (string) $product['color']);
-            foreach ($rawColors as $c) {
-                $trimmed = trim($c);
-                if ($trimmed !== '') {
-                    $colors[] = $trimmed;
-                }
+        foreach ($variants as $variant) {
+            $color = normalize_variant_value($variant['color'] ?? '');
+            $size  = normalize_variant_value($variant['size'] ?? '');
+            if ($color === '' || $size === '') {
+                continue;
             }
+            $variantMap[$color . '|' . $size] = $variant;
+            if (!in_array($color, $colors, true)) {
+                $colors[] = $color;
+            }
+            if (!in_array($size, $sizes, true)) {
+                $sizes[] = $size;
+            }
+        }
+
+        if (empty($sizes)) {
+            $sizes = parse_product_size_values($product['size'] ?? '');
+        }
+        if (empty($colors)) {
+            $colors = parse_product_color_values($product['color'] ?? '');
         }
 
         // Lấy sản phẩm liên quan cùng danh mục
@@ -130,13 +144,12 @@ class HomeController extends BaseController
     {
         $productId = (int) ($_POST['product_id'] ?? $_GET['add'] ?? 0);
         $quantity  = (int) ($_POST['quantity'] ?? 1);
+        $variantId = (int) ($_POST['variant_id'] ?? 0);
+        $buyNow    = !empty($_POST['buy_now']);
+
         if ($quantity <= 0) {
             $quantity = 1;
         }
-
-        $size   = trim($_POST['size'] ?? '');
-        $color  = trim($_POST['color'] ?? '');
-        $buyNow = !empty($_POST['buy_now']);
 
         if ($productId <= 0) {
             header('Location: ' . BASE_URL);
@@ -144,6 +157,7 @@ class HomeController extends BaseController
         }
 
         $productModel = new ProductModel();
+        $variantModel = new ProductVariantModel();
         $product = $productModel->getById($productId);
 
         if (!$product) {
@@ -152,30 +166,42 @@ class HomeController extends BaseController
             exit;
         }
 
-        if ($size === '') {
-            $defaultSizes = parse_product_size_values($product['size'] ?? '');
-            $size = $defaultSizes[0] ?? '';
-        }
-        if ($color === '' && !empty($product['color'])) {
-            $rawColors = explode(',', (string) $product['color']);
-            $color = trim($rawColors[0] ?? '');
+        $backToDetail = 'Location: ' . BASE_URL . '?action=product-detail&id=' . $productId;
+
+        if ($variantId <= 0) {
+            $_SESSION['flash_error'] = 'Vui lòng chọn màu và size trước khi thêm vào giỏ hàng.';
+            header($backToDetail);
+            exit;
         }
 
-        if ($color === '') {
-            $color = 'Tiêu chuẩn';
+        $variant = $variantModel->getById($variantId);
+        if (!$variant || (int) ($variant['product_id'] ?? 0) !== $productId || (int) ($variant['is_active'] ?? 0) !== 1) {
+            $_SESSION['flash_error'] = 'Biến thể sản phẩm không hợp lệ hoặc đã ngừng bán.';
+            header($backToDetail);
+            exit;
         }
 
-        // Tạo khóa định danh duy nhất cho từng biến thể thuộc tính trong giỏ
-        $cartKey = $productId . '_' . md5($size . '_' . $color);
+        $size     = normalize_variant_value($variant['size'] ?? '');
+        $color    = normalize_variant_value($variant['color'] ?? '');
+        $available = (int) ($variant['stock_quantity'] ?? 0);
 
         if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
             $_SESSION['cart'] = [];
+        }
+
+        $cartKey     = $productId . '_v' . $variantId;
+        $currentQty  = (int) ($_SESSION['cart'][$cartKey]['quantity'] ?? 0);
+        if ($available < $currentQty + $quantity) {
+            $_SESSION['flash_error'] = 'Biến thể ' . $color . ' - ' . $size . ' chỉ còn ' . $available . ' sản phẩm.';
+            header($backToDetail);
+            exit;
         }
 
         if (isset($_SESSION['cart'][$cartKey])) {
             $_SESSION['cart'][$cartKey]['quantity'] += $quantity;
         } else {
             $_SESSION['cart'][$cartKey] = [
+                'variant_id'    => $variantId,
                 'product_id'    => $productId,
                 'name'          => $product['product_name'],
                 'price'         => (float) $product['price'],
@@ -192,7 +218,7 @@ class HomeController extends BaseController
         if ($buyNow) {
             header('Location: ' . BASE_URL . '?action=cart');
         } else {
-            header('Location: ' . BASE_URL . '?action=product-detail&id=' . $productId);
+            header($backToDetail);
         }
         exit;
     }
@@ -226,8 +252,24 @@ class HomeController extends BaseController
 
         if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
             if ($quantity > 0) {
-                $_SESSION['cart'][$cartKey]['quantity'] = min(99, $quantity);
-                $_SESSION['flash_success'] = 'Đã cập nhật số lượng giỏ hàng!';
+                $limit = $this->cartItemStockLimit($_SESSION['cart'][$cartKey]);
+                if ($limit === 0) {
+                    unset($_SESSION['cart'][$cartKey]);
+                    $this->forgetCheckoutKey($cartKey);
+                    $_SESSION['flash_error'] = 'Biến thể đã chọn hiện không còn hàng và đã được xóa khỏi giỏ.';
+                } else {
+                    $wasAdjusted = false;
+                    if ($limit !== null && $quantity > $limit) {
+                        $quantity = max(1, $limit);
+                        $wasAdjusted = true;
+                    }
+                    $_SESSION['cart'][$cartKey]['quantity'] = min(99, $quantity);
+                    if ($wasAdjusted) {
+                        $_SESSION['flash_error'] = 'Số lượng đã được điều chỉnh theo tồn kho hiện có của biến thể.';
+                    } else {
+                        $_SESSION['flash_success'] = 'Đã cập nhật số lượng giỏ hàng!';
+                    }
+                }
             } else {
                 unset($_SESSION['cart'][$cartKey]);
                 $this->forgetCheckoutKey($cartKey);
@@ -250,12 +292,21 @@ class HomeController extends BaseController
         if ($cartKey !== '' && isset($_SESSION['cart'][$cartKey])) {
             $currentQty = (int) ($_SESSION['cart'][$cartKey]['quantity'] ?? 1);
             $newQty     = $currentQty + $delta;
+            $limit      = $this->cartItemStockLimit($_SESSION['cart'][$cartKey]);
 
-            if ($newQty > 0) {
+            if ($newQty > 0 && $limit !== 0) {
+                $wasAdjusted = false;
+                if ($limit !== null && $newQty > $limit) {
+                    $newQty = max(1, $limit);
+                    $wasAdjusted = true;
+                }
                 $_SESSION['cart'][$cartKey]['quantity'] = min(99, $newQty);
-                $_SESSION['flash_success'] = 'Đã cập nhật số lượng sản phẩm!';
+                if ($wasAdjusted) {
+                    $_SESSION['flash_error'] = 'Số lượng đã được điều chỉnh theo tồn kho hiện có của biến thể.';
+                } else {
+                    $_SESSION['flash_success'] = 'Đã cập nhật số lượng sản phẩm!';
+                }
             } else {
-                // Nếu giảm về 0 thì tự động xóa món hàng đó khỏi giỏ
                 unset($_SESSION['cart'][$cartKey]);
                 $this->forgetCheckoutKey($cartKey);
                 $_SESSION['flash_success'] = 'Đã xóa sản phẩm khỏi giỏ hàng!';
@@ -703,6 +754,21 @@ class HomeController extends BaseController
         exit;
     }
 
+    private function cartItemStockLimit(array $item)
+    {
+        $variantId = (int) ($item['variant_id'] ?? 0);
+        if ($variantId <= 0) {
+            return null;
+        }
+
+        $variant = (new ProductVariantModel())->getById($variantId);
+        if (!$variant || (int) ($variant['is_active'] ?? 0) !== 1) {
+            return 0;
+        }
+
+        return (int) ($variant['stock_quantity'] ?? 0);
+    }
+
     private function normalizeCheckoutKeys(array $rawKeys, array $cart)
     {
         $keys = [];
@@ -730,18 +796,21 @@ class HomeController extends BaseController
         }
 
         $productModel = new ProductModel();
+        $variantModel = new ProductVariantModel();
         $products = [];
-        $requiredStock = [];
+        $variants = [];
+        $requiredVariantStock = [];
         $items = [];
         $errors = [];
 
         foreach ($this->normalizeCheckoutKeys($rawKeys, $cart) as $key) {
             $sessionItem = $cart[$key];
             $productId = (int) ($sessionItem['product_id'] ?? 0);
+            $variantId = (int) ($sessionItem['variant_id'] ?? 0);
             $quantity = (int) ($sessionItem['quantity'] ?? 1);
 
-            if ($productId <= 0 || $quantity <= 0) {
-                $errors[] = 'Một sản phẩm đã chọn trong giỏ hàng không còn hợp lệ.';
+            if ($productId <= 0 || $variantId <= 0 || $quantity <= 0) {
+                $errors[] = 'Giỏ hàng có sản phẩm cũ chưa xác định biến thể. Vui lòng xóa và thêm lại sản phẩm.';
                 continue;
             }
 
@@ -755,24 +824,39 @@ class HomeController extends BaseController
                 continue;
             }
 
-            $requiredStock[$productId] = ($requiredStock[$productId] ?? 0) + $quantity;
+            if (!array_key_exists($variantId, $variants)) {
+                $variants[$variantId] = $variantModel->getById($variantId);
+            }
+
+            $variant = $variants[$variantId];
+            if (!$variant || (int) ($variant['product_id'] ?? 0) !== $productId || (int) ($variant['is_active'] ?? 0) !== 1) {
+                $errors[] = 'Biến thể đã chọn của "' . (string) ($product['product_name'] ?? 'Sản phẩm') . '" không còn hợp lệ. Vui lòng cập nhật giỏ hàng.';
+                continue;
+            }
+
+            $requiredVariantStock[$variantId] = ($requiredVariantStock[$variantId] ?? 0) + $quantity;
 
             $item = $sessionItem;
             $item['cart_key'] = $key;
             $item['cart_item_id'] = $key;
+            $item['variant_id'] = $variantId;
             $item['product_id'] = $productId;
             $item['quantity'] = $quantity;
             $item['price'] = (float) ($product['price'] ?? 0);
             $item['name'] = (string) ($product['product_name'] ?? ($sessionItem['name'] ?? 'Sản phẩm'));
             $item['image'] = (string) ($product['image'] ?? '');
             $item['category_name'] = (string) ($product['categories_name'] ?? '');
+            $item['size'] = normalize_variant_value($variant['size'] ?? '');
+            $item['color'] = normalize_variant_value($variant['color'] ?? '');
             $items[$key] = $item;
         }
 
-        foreach ($requiredStock as $productId => $neededQuantity) {
-            $availableQuantity = (int) ($products[$productId]['stock_quantity'] ?? 0);
+        foreach ($requiredVariantStock as $variantId => $neededQuantity) {
+            $variant = $variants[$variantId];
+            $availableQuantity = (int) ($variant['stock_quantity'] ?? 0);
             if ($neededQuantity > $availableQuantity) {
-                $errors[] = 'Sản phẩm "' . (string) ($products[$productId]['product_name'] ?? 'Sản phẩm') . '" chỉ còn ' . $availableQuantity . ' cái, không đủ cho số lượng ' . $neededQuantity . ' đã chọn.';
+                $label = normalize_variant_value($variant['color'] ?? '') . ' - ' . normalize_variant_value($variant['size'] ?? '');
+                $errors[] = 'Biến thể ' . $label . ' chỉ còn ' . $availableQuantity . ' cái, không đủ cho số lượng ' . $neededQuantity . ' đã chọn.';
             }
         }
 
