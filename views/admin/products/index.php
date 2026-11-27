@@ -144,7 +144,7 @@ $total        = count($products);
                             <th style="width: 140px;" class="text-end">Đơn giá</th>
                             <th style="width: 140px;" class="text-center">Size / Màu</th>
                             <th style="width: 130px;" class="text-center">Tồn kho</th>
-                            <th style="width: 150px;" class="text-center">Thao tác</th>
+                            <th style="width: 210px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -241,9 +241,16 @@ $total        = count($products);
                                     <?php endif; ?>
                                 </td>
 
-                                <!-- Thao tác Sửa / Xóa -->
+                                <!-- Thao tác Xem / Sửa / Xóa -->
                                 <td class="text-center">
                                     <div class="admin-row-actions">
+                                        <a href="<?= BASE_URL ?>?action=admin-product-detail&amp;id=<?= $pId ?>"
+                                           class="admin-btn-action admin-btn-action-view"
+                                           title="Xem chi tiết sản phẩm">
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
+                                            <span>Xem chi tiết</span>
+                                        </a>
+
                                         <a href="<?= BASE_URL ?>?action=admin-product-edit&amp;id=<?= $pId ?>"
                                            class="admin-btn-action admin-btn-action-edit"
                                            title="Chỉnh sửa thông tin &amp; ảnh sản phẩm">

@@ -387,6 +387,45 @@ class AdminController extends BaseController
         );
     }
 
+    public function productDetail()
+    {
+        $productModel = new ProductModel();
+        $variantModel = new ProductVariantModel();
+
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            $this->setFlash('error', 'Mã sản phẩm không hợp lệ.');
+            $this->redirect('?action=admin-products');
+        }
+
+        $product = $productModel->getById($id);
+        if (!$product) {
+            $this->setFlash('error', 'Không tìm thấy sản phẩm yêu cầu hoặc đã bị xóa.');
+            $this->redirect('?action=admin-products');
+        }
+
+        $variants   = $variantModel->getByProduct($id);
+        $totalStock = 0;
+        foreach ($variants as $variant) {
+            $totalStock += (int) ($variant['stock_quantity'] ?? 0);
+        }
+
+        $this->renderAdminPage(
+            'products/detail',
+            'Chi tiết sản phẩm #' . $id . ' | Quản trị SPORTIX',
+            'Chi tiết sản phẩm #' . $id,
+            'Xem thông tin sản phẩm và tồn kho theo từng biến thể.',
+            'products',
+            [
+                'product'      => $product,
+                'variants'     => $variants,
+                'totalStock'   => $totalStock,
+                'flashSuccess' => $this->getFlash('success'),
+                'flashError'   => $this->getFlash('error'),
+            ]
+        );
+    }
+
     /**
      * Thêm mới sản phẩm (GET: hiển thị form, POST: xử lý lưu kèm upload ảnh).
      */
