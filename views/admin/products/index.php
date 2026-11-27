@@ -144,7 +144,7 @@ $total        = count($products);
                             <th style="width: 140px;" class="text-end">Đơn giá</th>
                             <th style="width: 140px;" class="text-center">Size / Màu</th>
                             <th style="width: 130px;" class="text-center">Tồn kho</th>
-                            <th style="width: 210px;" class="text-center">Thao tác</th>
+                            <th style="width: 150px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -245,25 +245,25 @@ $total        = count($products);
                                 <td class="text-center">
                                     <div class="admin-row-actions">
                                         <a href="<?= BASE_URL ?>?action=admin-product-detail&amp;id=<?= $pId ?>"
-                                           class="admin-btn-action admin-btn-action-view"
-                                           title="Xem chi tiết sản phẩm">
+                                           class="admin-btn-action admin-btn-action-view admin-btn-action-icon"
+                                           title="Xem chi tiết sản phẩm"
+                                           aria-label="Xem chi tiết sản phẩm">
                                             <i class="bi bi-eye" aria-hidden="true"></i>
-                                            <span>Xem chi tiết</span>
                                         </a>
 
                                         <a href="<?= BASE_URL ?>?action=admin-product-edit&amp;id=<?= $pId ?>"
-                                           class="admin-btn-action admin-btn-action-edit"
-                                           title="Chỉnh sửa thông tin &amp; ảnh sản phẩm">
+                                           class="admin-btn-action admin-btn-action-edit admin-btn-action-icon"
+                                           title="Chỉnh sửa thông tin &amp; ảnh sản phẩm"
+                                           aria-label="Sửa sản phẩm">
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                            <span>Sửa</span>
                                         </a>
 
                                         <a href="<?= BASE_URL ?>?action=admin-product-delete&amp;id=<?= $pId ?>"
-                                           class="admin-btn-action admin-btn-action-delete"
+                                           class="admin-btn-action admin-btn-action-delete admin-btn-action-icon"
                                            title="Xóa sản phẩm"
+                                           aria-label="Xóa sản phẩm"
                                            onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm &quot;<?= addslashes(htmlspecialchars($pName, ENT_QUOTES, 'UTF-8')) ?>&quot; (ID: #<?= $pId ?>)?\nHình ảnh và dữ liệu liên quan sẽ bị xóa.');">
                                             <i class="bi bi-trash3" aria-hidden="true"></i>
-                                            <span>Xóa</span>
                                         </a>
                                     </div>
                                 </td>

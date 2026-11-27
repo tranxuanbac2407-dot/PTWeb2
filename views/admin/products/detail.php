@@ -63,9 +63,8 @@ $colorValue   = trim((string) ($product['color'] ?? ''));
 
         <div class="col-12 col-lg-8">
             <div class="admin-card h-100">
-                <div class="admin-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="admin-card-header">
                     <h3><i class="bi bi-box-seam me-1" aria-hidden="true"></i> Thông tin sản phẩm #<?= $productId ?></h3>
-                    <span class="admin-product-price fs-5"><?= number_format($price, 0, ',', '.') ?> <small>đ</small></span>
                 </div>
                 <div class="admin-card-body">
                     <div class="admin-order-meta-grid">
@@ -131,14 +130,14 @@ $colorValue   = trim((string) ($product['color'] ?? ''));
                 </div>
             <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-0">
+                    <table class="table table-sm table-bordered align-middle mb-0 admin-variant-table">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 90px;">Mã</th>
-                                <th>Màu</th>
-                                <th>Size</th>
-                                <th class="text-end" style="width: 140px;">Tồn kho</th>
-                                <th class="text-center" style="width: 150px;">Trạng thái</th>
+                                <th class="text-center" style="width: 80px;">Mã</th>
+                                <th style="width: 28%;">Màu</th>
+                                <th style="width: 20%;">Size</th>
+                                <th class="text-end" style="width: 110px;">Tồn kho</th>
+                                <th class="text-center" style="width: 130px;">Trạng thái</th>
                             </tr>
                         </thead>
                         <tbody>

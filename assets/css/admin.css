@@ -1783,6 +1783,15 @@
     border-color: #0284c7;
 }
 
+.admin-btn-action-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+    line-height: 1;
+    white-space: nowrap;
+}
+
 .admin-order-meta-grid {
     background: #f8fafc;
     border: 1px solid var(--sx-border);
@@ -2070,6 +2079,30 @@
     color: #ffffff;
     background: #b91c1c;
     border-color: #b91c1c;
+}
+
+.admin-variant-table > :not(caption) > * > * {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    vertical-align: middle;
+}
+
+.admin-variant-table thead th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--sx-muted);
+    background-color: #f8fafc;
+    white-space: nowrap;
+}
+
+.admin-variant-table tfoot th {
+    background-color: #f8fafc;
+}
+
+.admin-variant-table .badge {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
 }
 
 @media (max-width: 991.98px) {
