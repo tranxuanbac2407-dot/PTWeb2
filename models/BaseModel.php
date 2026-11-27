@@ -18,6 +18,12 @@ class BaseModel
         }
     }
 
+    // Lấy kết nối dùng chung cho transaction giữa các model
+    public function getConnection()
+    {
+        return $this->pdo;
+    }
+
     // Hủy kết nối CSDL
     public function __destruct()
     {

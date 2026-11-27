@@ -77,7 +77,8 @@ CREATE TABLE `orders` (
   `payment_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'unpaid',
   `order_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
   `return_reason` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `return_image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `return_image` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `stock_restored` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -90,6 +91,7 @@ CREATE TABLE `order_items` (
   `order_item_id` int NOT NULL,
   `order_id` int NOT NULL,
   `product_id` int DEFAULT NULL,
+  `variant_id` int DEFAULT NULL,
   `product_name` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
   `size` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `color` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -114,6 +116,21 @@ CREATE TABLE `products` (
   `size` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `color` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `stock_quantity` int NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `product_variants`
+--
+
+CREATE TABLE `product_variants` (
+  `variant_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `color` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `size` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `stock_quantity` int NOT NULL DEFAULT '0',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -176,7 +193,8 @@ ALTER TABLE `orders`
 ALTER TABLE `order_items`
   ADD PRIMARY KEY (`order_item_id`),
   ADD KEY `fk_order_items_orders` (`order_id`),
-  ADD KEY `fk_order_items_products` (`product_id`);
+  ADD KEY `fk_order_items_products` (`product_id`),
+  ADD KEY `fk_order_items_variants` (`variant_id`);
 
 --
 -- Indexes for table `products`
@@ -184,6 +202,14 @@ ALTER TABLE `order_items`
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
   ADD KEY `fk_products_categories` (`category_id`);
+
+--
+-- Indexes for table `product_variants`
+--
+ALTER TABLE `product_variants`
+  ADD PRIMARY KEY (`variant_id`),
+  ADD UNIQUE KEY `uq_product_variant` (`product_id`,`color`,`size`),
+  ADD KEY `fk_product_variants_products` (`product_id`);
 
 --
 -- Indexes for table `users`
@@ -233,6 +259,12 @@ ALTER TABLE `products`
   MODIFY `product_id` int NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `product_variants`
+--
+ALTER TABLE `product_variants`
+  MODIFY `variant_id` int NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
@@ -266,13 +298,20 @@ ALTER TABLE `orders`
 --
 ALTER TABLE `order_items`
   ADD CONSTRAINT `fk_order_items_orders` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_order_items_products` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_order_items_products` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_order_items_variants` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 --
 -- Constraints for table `products`
 --
 ALTER TABLE `products`
   ADD CONSTRAINT `fk_products_categories` FOREIGN KEY (`category_id`) REFERENCES `categories` (`categories_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `product_variants`
+--
+ALTER TABLE `product_variants`
+  ADD CONSTRAINT `fk_product_variants_products` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -8,6 +8,87 @@
  */
 class AdminController extends BaseController
 {
+    private function parseVariantStockInput()
+    {
+        $colors = $_POST['variant_color'] ?? [];
+        $sizes  = $_POST['variant_size'] ?? [];
+        $stocks = $_POST['variant_stock'] ?? [];
+
+        if (!is_array($colors) || !is_array($sizes) || !is_array($stocks)) {
+            return [[], 'Dữ liệu ma trận tồn kho không hợp lệ.'];
+        }
+
+        $rows  = [];
+        $count = min(count($colors), count($sizes), count($stocks));
+        for ($i = 0; $i < $count; $i++) {
+            $color = normalize_variant_value($colors[$i] ?? '');
+            $size  = normalize_variant_value($sizes[$i] ?? '');
+            $stock = trim((string) ($stocks[$i] ?? ''));
+
+            if ($color === '' || $size === '') {
+                return [[], 'Màu và size của biến thể không được để trống.'];
+            }
+            if ($stock === '' || !is_numeric($stock) || (int) $stock < 0) {
+                return [[], 'Tồn kho của biến thể ' . $color . ' - ' . $size . ' phải là số nguyên không âm.'];
+            }
+
+            $key = $color . '|' . $size;
+            if (isset($rows[$key])) {
+                return [[], 'Tổ hợp ' . $color . ' - ' . $size . ' bị lặp. Vui lòng kiểm tra lại ma trận tồn kho.'];
+            }
+
+            $rows[$key] = [
+                'color' => $color,
+                'size'  => $size,
+                'stock' => (int) $stock,
+            ];
+        }
+
+        return [array_values($rows), null];
+    }
+
+    private function buildVariantStockMap(array $rows)
+    {
+        $map = [];
+        foreach ($rows as $row) {
+            $map[normalize_variant_value($row['color'] ?? '') . '|' . normalize_variant_value($row['size'] ?? '')] = (int) ($row['stock'] ?? 0);
+        }
+
+        return $map;
+    }
+
+    private function getSessionVariantKeys($productId)
+    {
+        $keys  = [];
+        $groups = [
+            $_SESSION['cart'] ?? [],
+            $_SESSION['checkout_items'] ?? [],
+        ];
+
+        foreach ($groups as $items) {
+            if (!is_array($items)) {
+                continue;
+            }
+            foreach ($items as $item) {
+                if (!is_array($item)) {
+                    if (!is_scalar($item) || !isset($_SESSION['cart'][$item])) {
+                        continue;
+                    }
+                    $item = $_SESSION['cart'][$item];
+                }
+                if (!is_array($item) || (int) ($item['product_id'] ?? 0) !== (int) $productId) {
+                    continue;
+                }
+                $key = normalize_variant_value($item['color'] ?? '') . '|' . normalize_variant_value($item['size'] ?? '');
+                if ($key !== '|') {
+                    $keys[$key] = $key;
+                }
+            }
+        }
+
+        return array_values($keys);
+    }
+
     /**
      * Trang Dashboard quản trị.
      */
@@ -267,6 +348,7 @@ class AdminController extends BaseController
     {
         $productModel  = new ProductModel();
         $categoryModel = new CategoryModel();
+        $variantModel  = new ProductVariantModel();
 
         $keyword    = trim($_GET['keyword'] ?? '');
         $categoryId = (int) ($_GET['category_id'] ?? 0);
@@ -281,6 +363,8 @@ class AdminController extends BaseController
             $loadError = 'Không thể tải danh sách sản phẩm từ cơ sở dữ liệu. Vui lòng thử lại sau.';
         }
 
+        $variantStockTotals = $variantModel->getStockTotals();
+
         $flashSuccess = $this->getFlash('success');
         $flashError   = $this->getFlash('error');
 
@@ -291,13 +375,14 @@ class AdminController extends BaseController
             'Danh sách sản phẩm thể thao đang kinh doanh tại SPORTIX.',
             'products',
             [
-                'products'     => $products,
-                'categories'   => $categories,
-                'keyword'      => $keyword,
-                'categoryId'   => $categoryId,
-                'loadError'    => $loadError,
-                'flashSuccess' => $flashSuccess,
-                'flashError'   => $flashError,
+                'products'           => $products,
+                'categories'         => $categories,
+                'variantStockTotals' => $variantStockTotals,
+                'keyword'            => $keyword,
+                'categoryId'         => $categoryId,
+                'loadError'          => $loadError,
+                'flashSuccess'       => $flashSuccess,
+                'flashError'         => $flashError,
             ]
         );
     }
@@ -313,58 +398,63 @@ class AdminController extends BaseController
 
         $errors = [];
         $old = [
-            'product_name'   => '',
-            'category_id'    => 0,
-            'price'          => '',
-            'size'           => '',
-            'size_type'      => '',
-            'size_values'    => [],
-            'color'          => '',
-            'stock_quantity' => 0,
-            'description'    => '',
-            'image_url'      => '',
+            'product_name' => '',
+            'category_id'  => 0,
+            'price'        => '',
+            'size'         => '',
+            'size_type'    => '',
+            'size_values'  => [],
+            'color'        => '',
+            'description'  => '',
+            'image_url'    => '',
         ];
+        $variantRows   = [];
+        $variantStocks = [];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $old['product_name']   = trim($_POST['product_name'] ?? '');
-            $old['category_id']    = (int) ($_POST['category_id'] ?? 0);
-            $old['price']          = trim($_POST['price'] ?? '');
-            $old['size']           = trim($_POST['size'] ?? '');
-            $old['size_type']      = trim($_POST['size_type'] ?? '');
-            $sizeValues            = $_POST['size_values'] ?? [];
-            $old['size_values']    = is_array($sizeValues) ? $sizeValues : [];
-            $old['color']          = trim($_POST['color'] ?? '');
-            $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '0');
-            $old['description']    = trim($_POST['description'] ?? '');
-            $old['image_url']      = trim($_POST['image_url'] ?? '');
+            $old['product_name'] = trim($_POST['product_name'] ?? '');
+            $old['category_id']  = (int) ($_POST['category_id'] ?? 0);
+            $old['price']        = trim($_POST['price'] ?? '');
+            $old['size']         = trim($_POST['size'] ?? '');
+            $old['size_type']    = trim($_POST['size_type'] ?? '');
+            $sizeValues          = $_POST['size_values'] ?? [];
+            $old['size_values']  = is_array($sizeValues) ? $sizeValues : [];
+            $colors              = parse_product_color_values($_POST['color'] ?? '');
+            $old['color']        = implode(',', $colors);
+            $old['description']  = trim($_POST['description'] ?? '');
+            $old['image_url']    = trim($_POST['image_url'] ?? '');
 
-            // 1. Kiểm tra CSRF
+            [$variantRows, $variantError] = $this->parseVariantStockInput();
+            $variantStocks = $this->buildVariantStockMap($variantRows);
+
             if (!$this->csrfValid()) {
                 $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';
             }
 
-            // 2. Validate tên sản phẩm
             if ($old['product_name'] === '') {
                 $errors['product_name'] = 'Vui lòng nhập tên sản phẩm.';
             } elseif (mb_strlen($old['product_name']) > 200) {
                 $errors['product_name'] = 'Tên sản phẩm không được vượt quá 200 ký tự.';
             }
 
-            // 3. Validate danh mục
             if ($old['category_id'] <= 0) {
                 $errors['category_id'] = 'Vui lòng chọn danh mục cho sản phẩm.';
             }
 
-            // 4. Validate giá bán
             if ($old['price'] === '') {
                 $errors['price'] = 'Vui lòng nhập đơn giá sản phẩm.';
             } elseif (!is_numeric($old['price']) || (float) $old['price'] < 0) {
                 $errors['price'] = 'Giá bán phải là số hợp lệ và lớn hơn hoặc bằng 0.';
             }
 
-            // 5. Validate số lượng tồn kho
-            if ($old['stock_quantity'] === '' || !is_numeric($old['stock_quantity']) || (int) $old['stock_quantity'] < 0) {
-                $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
+            if (empty($colors)) {
+                $errors['color'] = 'Vui lòng nhập ít nhất một màu cho sản phẩm.';
+            }
+
+            if ($variantError !== null) {
+                $errors['variant'] = $variantError;
+            } elseif (empty($variantRows)) {
+                $errors['variant'] = 'Vui lòng nhập ít nhất một tổ hợp màu - size và tồn kho tương ứng.';
             }
 
             $finalSize = null;
@@ -379,7 +469,6 @@ class AdminController extends BaseController
                 }
             }
 
-            // 6. Xử lý ảnh tải lên hoặc URL ảnh (hỗ trợ cả input image_file lẫn image)
             $finalImage = null;
             $imgError   = null;
             $uploadItem = $_FILES['image_file'] ?? $_FILES['image'] ?? null;
@@ -398,28 +487,40 @@ class AdminController extends BaseController
                 $finalImage = $old['image_url'];
             }
 
-            // 7. Nếu không có lỗi, tiến hành lưu vào CSDL
             if (empty($errors)) {
-                $newId = $productModel->create([
-                    'product_name'   => $old['product_name'],
-                    'category_id'    => $old['category_id'],
-                    'price'          => (float) $old['price'],
-                    'size'           => $finalSize,
-                    'color'          => $old['color'] !== '' ? $old['color'] : null,
-                    'stock_quantity' => (int) $old['stock_quantity'],
-                    'description'    => $old['description'] !== '' ? $old['description'] : null,
-                    'image'          => $finalImage,
-                ]);
+                $pdo = $productModel->getConnection();
 
-                if ($newId !== false) {
+                try {
+                    $pdo->beginTransaction();
+
+                    $newId = $productModel->create([
+                        'product_name' => $old['product_name'],
+                        'category_id'  => $old['category_id'],
+                        'price'        => (float) $old['price'],
+                        'size'         => $finalSize,
+                        'color'        => $old['color'] !== '' ? $old['color'] : null,
+                        'description'  => $old['description'] !== '' ? $old['description'] : null,
+                        'image'        => $finalImage,
+                    ]);
+                    if ($newId === false) {
+                        throw new RuntimeException('Không thể lưu sản phẩm vào cơ sở dữ liệu.');
+                    }
+
+                    $variantModel = new ProductVariantModel($pdo);
+                    $variantModel->syncForProduct($newId, $variantRows, []);
+
+                    $pdo->commit();
+
                     $this->setFlash('success', 'Thêm sản phẩm "' . htmlspecialchars($old['product_name']) . '" thành công!');
                     $this->redirect('?action=admin-products');
-                } else {
-                    // Nếu lưu thất bại mà đã upload ảnh thì dọn dẹp file vừa upload
+                } catch (Throwable $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     if (!empty($finalImage)) {
                         delete_upload_file($finalImage);
                     }
-                    $errors['general'] = 'Không thể lưu sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại sau.';
+                    $errors['general'] = $e->getMessage() !== '' ? $e->getMessage() : 'Không thể lưu sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại sau.';
                 }
             }
         }
@@ -434,13 +535,14 @@ class AdminController extends BaseController
             'Nhập thông tin sản phẩm và tải ảnh lên hệ thống.',
             'products',
             [
-                'isEdit'     => false,
-                'product'    => null,
-                'categories' => $categories,
-                'old'        => $old,
-                'errors'     => $errors,
-                'csrfToken'  => $csrfToken,
-                'flashError' => $flashError,
+                'isEdit'        => false,
+                'product'       => null,
+                'categories'    => $categories,
+                'old'           => $old,
+                'variantStocks' => $variantStocks,
+                'errors'        => $errors,
+                'csrfToken'     => $csrfToken,
+                'flashError'    => $flashError,
             ]
         );
     }
@@ -452,6 +554,7 @@ class AdminController extends BaseController
     {
         $productModel  = new ProductModel();
         $categoryModel = new CategoryModel();
+        $variantModel  = new ProductVariantModel();
         $categories    = $categoryModel->getAll();
 
         $id = (int) ($_GET['id'] ?? 0);
@@ -466,64 +569,78 @@ class AdminController extends BaseController
             $this->redirect('?action=admin-products');
         }
 
+        $existingVariants = $variantModel->getByProduct($id);
+        $variantRows      = [];
+        foreach ($existingVariants as $variant) {
+            $variantRows[] = [
+                'color' => $variant['color'],
+                'size'  => $variant['size'],
+                'stock' => (int) $variant['stock_quantity'],
+            ];
+        }
+        $variantStocks = $this->buildVariantStockMap($variantRows);
+
         $existingSize     = (string) ($product['size'] ?? '');
         $existingSizeType = get_product_size_type($existingSize);
 
         $errors = [];
         $old = [
-            'product_name'   => $product['product_name'] ?? '',
-            'category_id'    => (int) ($product['category_id'] ?? 0),
-            'price'          => $product['price'] ?? '',
-            'size'           => $existingSize,
-            'size_type'      => $existingSizeType !== '' ? $existingSizeType : 'legacy',
-            'size_values'    => parse_product_size_values($existingSize),
-            'color'          => $product['color'] ?? '',
-            'stock_quantity' => $product['stock_quantity'] ?? 0,
-            'description'    => $product['description'] ?? '',
-            'image_url'      => (isset($product['image']) && (str_starts_with($product['image'], 'http://') || str_starts_with($product['image'], 'https://'))) ? $product['image'] : '',
+            'product_name' => $product['product_name'] ?? '',
+            'category_id'  => (int) ($product['category_id'] ?? 0),
+            'price'        => $product['price'] ?? '',
+            'size'         => $existingSize,
+            'size_type'    => $existingSizeType !== '' ? $existingSizeType : 'legacy',
+            'size_values'  => parse_product_size_values($existingSize),
+            'color'        => $product['color'] ?? '',
+            'description'  => $product['description'] ?? '',
+            'image_url'    => (isset($product['image']) && (str_starts_with($product['image'], 'http://') || str_starts_with($product['image'], 'https://'))) ? $product['image'] : '',
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $old['product_name']   = trim($_POST['product_name'] ?? '');
-            $old['category_id']    = (int) ($_POST['category_id'] ?? 0);
-            $old['price']          = trim($_POST['price'] ?? '');
-            $old['size']           = trim($_POST['size'] ?? '');
-            $old['size_type']      = trim($_POST['size_type'] ?? '');
-            $sizeValues            = $_POST['size_values'] ?? [];
-            $old['size_values']    = is_array($sizeValues) ? $sizeValues : [];
-            $old['color']          = trim($_POST['color'] ?? '');
-            $old['stock_quantity'] = trim($_POST['stock_quantity'] ?? '0');
-            $old['description']    = trim($_POST['description'] ?? '');
-            $old['image_url']      = trim($_POST['image_url'] ?? '');
-            $deleteImage           = !empty($_POST['delete_image']);
+            $old['product_name'] = trim($_POST['product_name'] ?? '');
+            $old['category_id']  = (int) ($_POST['category_id'] ?? 0);
+            $old['price']        = trim($_POST['price'] ?? '');
+            $old['size']         = trim($_POST['size'] ?? '');
+            $old['size_type']    = trim($_POST['size_type'] ?? '');
+            $sizeValues          = $_POST['size_values'] ?? [];
+            $old['size_values']  = is_array($sizeValues) ? $sizeValues : [];
+            $colors              = parse_product_color_values($_POST['color'] ?? '');
+            $old['color']        = implode(',', $colors);
+            $old['description']  = trim($_POST['description'] ?? '');
+            $old['image_url']    = trim($_POST['image_url'] ?? '');
+            $deleteImage         = !empty($_POST['delete_image']);
 
-            // 1. Kiểm tra CSRF
+            [$variantRows, $variantError] = $this->parseVariantStockInput();
+            $variantStocks = $this->buildVariantStockMap($variantRows);
+
             if (!$this->csrfValid()) {
                 $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';
             }
 
-            // 2. Validate tên sản phẩm
             if ($old['product_name'] === '') {
                 $errors['product_name'] = 'Vui lòng nhập tên sản phẩm.';
             } elseif (mb_strlen($old['product_name']) > 200) {
                 $errors['product_name'] = 'Tên sản phẩm không được vượt quá 200 ký tự.';
             }
 
-            // 3. Validate danh mục
             if ($old['category_id'] <= 0) {
                 $errors['category_id'] = 'Vui lòng chọn danh mục hợp lệ.';
             }
 
-            // 4. Validate giá bán
             if ($old['price'] === '') {
                 $errors['price'] = 'Vui lòng nhập đơn giá sản phẩm.';
             } elseif (!is_numeric($old['price']) || (float) $old['price'] < 0) {
                 $errors['price'] = 'Giá bán phải là số hợp lệ và lớn hơn hoặc bằng 0.';
             }
 
-            // 5. Validate số lượng tồn kho
-            if ($old['stock_quantity'] === '' || !is_numeric($old['stock_quantity']) || (int) $old['stock_quantity'] < 0) {
-                $errors['stock_quantity'] = 'Số lượng tồn kho phải là số nguyên không âm.';
+            if (empty($colors)) {
+                $errors['color'] = 'Vui lòng nhập ít nhất một màu cho sản phẩm.';
+            }
+
+            if ($variantError !== null) {
+                $errors['variant'] = $variantError;
+            } elseif (empty($variantRows)) {
+                $errors['variant'] = 'Vui lòng nhập ít nhất một tổ hợp màu - size và tồn kho tương ứng.';
             }
 
             $finalSize = null;
@@ -538,18 +655,15 @@ class AdminController extends BaseController
                 }
             }
 
-            // 6. Xử lý quản lý và cập nhật ảnh sản phẩm
             $finalImage = $product['image'] ?? null;
             $newUploadedFile = null;
             $shouldDeleteOldFile = false;
             $uploadItem = $_FILES['image_file'] ?? $_FILES['image'] ?? null;
 
             if ($deleteImage) {
-                // Người dùng chọn xóa ảnh hiện tại
                 $finalImage = null;
                 $shouldDeleteOldFile = true;
             } elseif ($uploadItem && isset($uploadItem['error']) && $uploadItem['error'] !== UPLOAD_ERR_NO_FILE) {
-                // Người dùng tải tệp ảnh mới lên từ máy
                 $imgError = null;
                 if (!is_valid_image_upload($uploadItem, $imgError)) {
                     $errors['image'] = $imgError;
@@ -563,38 +677,48 @@ class AdminController extends BaseController
                     }
                 }
             } elseif ($old['image_url'] !== '' && $old['image_url'] !== ($product['image'] ?? '')) {
-                // Người dùng nhập link URL ảnh mới
                 $finalImage = $old['image_url'];
                 $shouldDeleteOldFile = true;
             }
 
-            // 7. Cập nhật vào CSDL nếu không có lỗi
             if (empty($errors)) {
-                $updated = $productModel->update($id, [
-                    'product_name'   => $old['product_name'],
-                    'category_id'    => $old['category_id'],
-                    'price'          => (float) $old['price'],
-                    'size'           => $finalSize,
-                    'color'          => $old['color'] !== '' ? $old['color'] : null,
-                    'stock_quantity' => (int) $old['stock_quantity'],
-                    'description'    => $old['description'] !== '' ? $old['description'] : null,
-                    'image'          => $finalImage,
-                ]);
+                $pdo = $productModel->getConnection();
 
-                if ($updated !== false) {
-                    // Nếu cập nhật thành công và cần dọn dẹp ảnh cũ
+                try {
+                    $pdo->beginTransaction();
+
+                    $updated = $productModel->update($id, [
+                        'product_name' => $old['product_name'],
+                        'category_id'  => $old['category_id'],
+                        'price'        => (float) $old['price'],
+                        'size'         => $finalSize,
+                        'color'        => $old['color'] !== '' ? $old['color'] : null,
+                        'description'  => $old['description'] !== '' ? $old['description'] : null,
+                        'image'        => $finalImage,
+                    ]);
+                    if ($updated === false) {
+                        throw new RuntimeException('Không thể cập nhật sản phẩm vào cơ sở dữ liệu.');
+                    }
+
+                    $variantModel = new ProductVariantModel($pdo);
+                    $variantModel->syncForProduct($id, $variantRows, $this->getSessionVariantKeys($id));
+
+                    $pdo->commit();
+
                     if ($shouldDeleteOldFile && !empty($product['image'])) {
                         delete_upload_file($product['image']);
                     }
 
                     $this->setFlash('success', 'Cập nhật sản phẩm #' . $id . ' thành công!');
                     $this->redirect('?action=admin-products');
-                } else {
-                    // Nếu lỗi CSDL và vừa upload ảnh mới, dọn dẹp file vừa upload
+                } catch (Throwable $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     if ($newUploadedFile) {
                         delete_upload_file($newUploadedFile);
                     }
-                    $errors['general'] = 'Không thể cập nhật sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại.';
+                    $errors['general'] = $e->getMessage() !== '' ? $e->getMessage() : 'Không thể cập nhật sản phẩm vào cơ sở dữ liệu. Vui lòng thử lại.';
                 }
             }
         }
@@ -609,13 +733,14 @@ class AdminController extends BaseController
             'Cập nhật thông tin, giá bán và hình ảnh: ' . htmlspecialchars($product['product_name'] ?? ''),
             'products',
             [
-                'isEdit'     => true,
-                'product'    => $product,
-                'categories' => $categories,
-                'old'        => $old,
-                'errors'     => $errors,
-                'csrfToken'  => $csrfToken,
-                'flashError' => $flashError,
+                'isEdit'        => true,
+                'product'       => $product,
+                'categories'    => $categories,
+                'old'           => $old,
+                'variantStocks' => $variantStocks,
+                'errors'        => $errors,
+                'csrfToken'     => $csrfToken,
+                'flashError'    => $flashError,
             ]
         );
     }

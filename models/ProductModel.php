@@ -532,8 +532,8 @@ class ProductModel extends BaseModel
     {
         try {
             $sql = 'INSERT INTO ' . $this->table . ' '
-                 . '(category_id, product_name, price, description, image, size, color, stock_quantity) '
-                 . 'VALUES (:category_id, :product_name, :price, :description, :image, :size, :color, :stock_quantity)';
+                 . '(category_id, product_name, price, description, image, size, color) '
+                 . 'VALUES (:category_id, :product_name, :price, :description, :image, :size, :color)';
 
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':category_id', (int) ($data['category_id'] ?? 0), PDO::PARAM_INT);
@@ -543,7 +543,6 @@ class ProductModel extends BaseModel
             $statement->bindValue(':image', $data['image'] ?? null);
             $statement->bindValue(':size', $data['size'] ?? null);
             $statement->bindValue(':color', $data['color'] ?? null);
-            $statement->bindValue(':stock_quantity', (int) ($data['stock_quantity'] ?? 0), PDO::PARAM_INT);
 
             if ($statement->execute()) {
                 return (int) $this->pdo->lastInsertId();
@@ -571,10 +570,9 @@ class ProductModel extends BaseModel
                  . 'price = :price, '
                  . 'description = :description, '
                  . 'image = :image, '
-                 . 'size = :size, '
-                 . 'color = :color, '
-                 . 'stock_quantity = :stock_quantity '
-                 . 'WHERE product_id = :id';
+                  . 'size = :size, '
+                  . 'color = :color '
+                  . 'WHERE product_id = :id';
 
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':id', (int) $id, PDO::PARAM_INT);
@@ -585,7 +583,6 @@ class ProductModel extends BaseModel
             $statement->bindValue(':image', $data['image'] ?? null);
             $statement->bindValue(':size', $data['size'] ?? null);
             $statement->bindValue(':color', $data['color'] ?? null);
-            $statement->bindValue(':stock_quantity', (int) ($data['stock_quantity'] ?? 0), PDO::PARAM_INT);
 
             return $statement->execute();
         } catch (Throwable $e) {

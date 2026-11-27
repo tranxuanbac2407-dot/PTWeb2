@@ -17,11 +17,15 @@ $formAction = $isEdit
 $valName  = $old['product_name'] ?? ($product['product_name'] ?? '');
 $valCat   = (int) ($old['category_id'] ?? ($product['category_id'] ?? 0));
 $valPrice = $old['price'] ?? ($product['price'] ?? '');
-$valStock = $old['stock_quantity'] ?? ($product['stock_quantity'] ?? 0);
 $valSize  = $old['size'] ?? ($product['size'] ?? '');
 $valColor = $old['color'] ?? ($product['color'] ?? '');
 $valDesc  = $old['description'] ?? ($product['description'] ?? '');
 $valUrl   = $old['image_url'] ?? '';
+
+$variantStocks = $variantStocks ?? [];
+if (!is_array($variantStocks)) {
+    $variantStocks = [];
+}
 
 $sizeConfig      = product_size_config();
 $detectedType    = get_product_size_type((string) ($product['size'] ?? ''));
@@ -172,46 +176,27 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
                             </div>
                         </div>
 
-                        <!-- Số lượng tồn kho, Size, Màu sắc -->
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <div class="admin-form-group">
-                                    <label for="stock_quantity" class="admin-form-label">
-                                        Tồn kho <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="number"
-                                           id="stock_quantity"
-                                           name="stock_quantity"
-                                           class="admin-form-input <?= !empty($errors['stock_quantity']) ? 'is-invalid' : '' ?>"
-                                           placeholder="Số lượng"
-                                           value="<?= htmlspecialchars((string) $valStock, ENT_QUOTES, 'UTF-8') ?>"
-                                           min="0"
-                                           step="1"
-                                           required>
-                                    <?php if (!empty($errors['stock_quantity'])): ?>
-                                        <p class="admin-field-error">
-                                            <i class="bi bi-exclamation-circle"></i>
-                                            <?= htmlspecialchars($errors['stock_quantity'], ENT_QUOTES, 'UTF-8') ?>
-                                        </p>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                            <div class="col-12 col-md-6">
-                                <div class="admin-form-group">
-                                    <label for="color" class="admin-form-label">
-                                        Màu sắc
-                                    </label>
-                                    <input type="text"
-                                           id="color"
-                                           name="color"
-                                           class="admin-form-input <?= !empty($errors['color']) ? 'is-invalid' : '' ?>"
-                                           placeholder="Ví dụ: Đen, Trắng, Đỏ"
-                                           value="<?= htmlspecialchars($valColor, ENT_QUOTES, 'UTF-8') ?>"
-                                           maxlength="50">
-                                    <p class="admin-form-hint">Các màu cách nhau bằng dấu phẩy</p>
-                                </div>
-                            </div>
+                        <!-- Màu sắc -->
+                        <div class="admin-form-group">
+                            <label for="color" class="admin-form-label">
+                                Màu sắc <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   id="color"
+                                   name="color"
+                                   class="admin-form-input <?= !empty($errors['color']) ? 'is-invalid' : '' ?>"
+                                   placeholder="Ví dụ: Đen, Trắng, Đỏ"
+                                   value="<?= htmlspecialchars($valColor, ENT_QUOTES, 'UTF-8') ?>"
+                                   maxlength="50"
+                                   required>
+                            <?php if (!empty($errors['color'])): ?>
+                                <p class="admin-field-error">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                    <?= htmlspecialchars($errors['color'], ENT_QUOTES, 'UTF-8') ?>
+                                </p>
+                            <?php else: ?>
+                                <p class="admin-form-hint">Các màu cách nhau bằng dấu phẩy. Tồn kho nhập trong ma trận bên dưới.</p>
+                            <?php endif; ?>
                         </div>
 
                         <div class="row g-3" style="margin-top: 1rem;">
@@ -304,6 +289,25 @@ $currentImgSrc = !empty($currentImage) ? get_product_image_url($currentImage) : 
                                            data-legacy-size="<?= htmlspecialchars($legacySizeValue, ENT_QUOTES, 'UTF-8') ?>">
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="admin-form-group" style="margin-top: 1rem;">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="admin-form-label d-block mb-0">Tồn kho theo biến thể (Màu × Size)</span>
+                                <button type="button" class="admin-btn admin-btn-outline btn-sm" id="buildVariantMatrix">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                    <span>Tạo ma trận</span>
+                                </button>
+                            </div>
+                            <div id="variantMatrix" class="variant-matrix" style="margin-top: 0.75rem;"></div>
+                            <?php if (!empty($errors['variant'])): ?>
+                                <p class="admin-field-error">
+                                    <i class="bi bi-exclamation-circle"></i>
+                                    <?= htmlspecialchars($errors['variant'], ENT_QUOTES, 'UTF-8') ?>
+                                </p>
+                            <?php else: ?>
+                                <p class="admin-form-hint">Nhập số lượng tồn cho từng tổ hợp. Để trống hoặc bỏ ô nghĩa là ngừng sử dụng biến thể đó; biến thể còn tồn kho không thể bị bỏ.</p>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Mô tả sản phẩm -->
@@ -615,6 +619,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         sizeHiddenInput.value = value;
+        if (typeof window.refreshVariantMatrix === 'function') {
+            window.refreshVariantMatrix();
+        }
     };
 
     sizeTypeSelect.addEventListener('change', syncSizeFields);
@@ -622,5 +629,75 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('change', syncSizeFields);
     });
     syncSizeFields();
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const colorInput = document.getElementById('color');
+    const sizeHiddenInput = document.getElementById('size');
+    const matrix = document.getElementById('variantMatrix');
+    const buildButton = document.getElementById('buildVariantMatrix');
+    const variantStocks = <?= json_encode($variantStocks, JSON_UNESCAPED_UNICODE) ?>;
+
+    if (!colorInput || !sizeHiddenInput || !matrix) {
+        return;
+    }
+
+    const escapeHtml = function (value) {
+        return String(value).replace(/[&<>"']/g, function (char) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char];
+        });
+    };
+
+    const splitValues = function (raw) {
+        return String(raw).split(',').map(function (item) {
+            return item.trim().replace(/\s+/g, ' ');
+        }).filter(function (item) {
+            return item !== '';
+        });
+    };
+
+    const build = function () {
+        const colors = splitValues(colorInput.value);
+        const sizes = splitValues(sizeHiddenInput.value);
+
+        if (colors.length === 0 || sizes.length === 0) {
+            matrix.innerHTML = '<p class="admin-form-hint">Chọn màu và kích thước để tạo ma trận tồn kho.</p>';
+
+            return;
+        }
+
+        let html = '<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0"><thead><tr><th>Màu</th>';
+        sizes.forEach(function (size) {
+            html += '<th class="text-center">' + escapeHtml(size) + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        colors.forEach(function (color) {
+            html += '<tr><th class="align-middle">' + escapeHtml(color) + '</th>';
+            sizes.forEach(function (size) {
+                const key = color + '|' + size;
+                const stock = Object.prototype.hasOwnProperty.call(variantStocks, key) ? variantStocks[key] : '';
+                html += '<td>'
+                     + '<input type="hidden" name="variant_color[]" value="' + escapeHtml(color) + '">'
+                     + '<input type="hidden" name="variant_size[]" value="' + escapeHtml(size) + '">'
+                     + '<input type="number" name="variant_stock[]" class="form-control form-control-sm" min="0" step="1" value="' + escapeHtml(stock) + '" placeholder="0">'
+                     + '</td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        matrix.innerHTML = html;
+    };
+
+    window.refreshVariantMatrix = build;
+
+    colorInput.addEventListener('input', build);
+    if (buildButton) {
+        buildButton.addEventListener('click', build);
+    }
+    build();
 });
 </script>

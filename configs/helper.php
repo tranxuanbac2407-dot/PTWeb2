@@ -40,6 +40,30 @@ if (!function_exists('product_size_none_value')) {
     }
 }
 
+if (!function_exists('normalize_variant_value')) {
+    function normalize_variant_value($value)
+    {
+        $value = trim((string) $value);
+
+        return preg_replace('/\s+/u', ' ', $value);
+    }
+}
+
+if (!function_exists('parse_product_color_values')) {
+    function parse_product_color_values($color)
+    {
+        $values = [];
+        foreach (explode(',', (string) $color) as $item) {
+            $item = normalize_variant_value($item);
+            if ($item !== '' && !in_array($item, $values, true)) {
+                $values[] = $item;
+            }
+        }
+
+        return $values;
+    }
+}
+
 if (!function_exists('product_size_config')) {
     function product_size_config($type = null)
     {

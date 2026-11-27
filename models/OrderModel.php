@@ -187,7 +187,7 @@ class OrderModel extends BaseModel
 
     /**
      * Tự động tạo mới một đơn hàng kèm các món hàng chi tiết.
-     * Tự động cập nhật giảm số lượng tồn kho (stock_quantity) và dọn dẹp giỏ hàng.
+     * Tự động cập nhật giảm tồn kho theo biến thể và dọn dẹp giỏ hàng.
      * Sử dụng transaction để bảo toàn dữ liệu.
      *
      * @param array $orderData
@@ -227,40 +227,45 @@ class OrderModel extends BaseModel
                 return 0;
             }
 
-            $itemSql = 'INSERT INTO order_items '
-                     . '(order_id, product_id, product_name, size, color, unit_price, quantity, subtotal) '
-                     . 'VALUES (:order_id, :product_id, :product_name, :size, :color, :unit_price, :quantity, :subtotal)';
-            $itemStmt = $this->pdo->prepare($itemSql);
+            $variantModel = new ProductVariantModel($this->getConnection());
 
-            $stockSql = 'UPDATE products SET stock_quantity = stock_quantity - :qty WHERE product_id = :p_id AND stock_quantity >= :qty';
-            $stockStmt = $this->pdo->prepare($stockSql);
+            $itemSql = 'INSERT INTO order_items '
+                     . '(order_id, product_id, variant_id, product_name, size, color, unit_price, quantity, subtotal) '
+                     . 'VALUES (:order_id, :product_id, :variant_id, :product_name, :size, :color, :unit_price, :quantity, :subtotal)';
+            $itemStmt = $this->pdo->prepare($itemSql);
 
             foreach ($cartItems as $item) {
                 $unitPrice = (float) ($item['price'] ?? 0);
                 $qty       = (int) ($item['quantity'] ?? 1);
                 $subtotal  = $unitPrice * $qty;
                 $pId       = (int) ($item['product_id'] ?? 0);
+                $variantId = (int) ($item['variant_id'] ?? 0);
 
-                if ($pId <= 0 || $qty <= 0 || $unitPrice < 0) {
+                if ($pId <= 0 || $variantId <= 0 || $qty <= 0 || $unitPrice < 0) {
                     throw new RuntimeException('Dữ liệu sản phẩm trong giỏ hàng không hợp lệ.');
                 }
 
+                $variant = $variantModel->getById($variantId);
+                if (!$variant || (int) ($variant['product_id'] ?? 0) !== $pId || (int) ($variant['is_active'] ?? 0) !== 1) {
+                    throw new RuntimeException('Biến thể của "' . (string) ($item['name'] ?? 'Sản phẩm') . '" không còn hợp lệ.');
+                }
+
+                $size  = normalize_variant_value($variant['size'] ?? '');
+                $color = normalize_variant_value($variant['color'] ?? '');
+
                 $itemStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
                 $itemStmt->bindValue(':product_id', $pId, PDO::PARAM_INT);
+                $itemStmt->bindValue(':variant_id', $variantId, PDO::PARAM_INT);
                 $itemStmt->bindValue(':product_name', trim($item['name'] ?? 'Sản phẩm'));
-                $itemStmt->bindValue(':size', !empty($item['size']) ? trim($item['size']) : null);
-                $itemStmt->bindValue(':color', !empty($item['color']) ? trim($item['color']) : null);
+                $itemStmt->bindValue(':size', $size !== '' ? $size : null);
+                $itemStmt->bindValue(':color', $color !== '' ? $color : null);
                 $itemStmt->bindValue(':unit_price', $unitPrice);
                 $itemStmt->bindValue(':quantity', $qty, PDO::PARAM_INT);
                 $itemStmt->bindValue(':subtotal', $subtotal);
                 $itemStmt->execute();
 
-                $stockStmt->bindValue(':qty', $qty, PDO::PARAM_INT);
-                $stockStmt->bindValue(':p_id', $pId, PDO::PARAM_INT);
-                $stockStmt->execute();
-
-                if ($stockStmt->rowCount() < 1) {
-                    throw new RuntimeException('Sản phẩm "' . (string) ($item['name'] ?? 'Sản phẩm') . '" không đủ tồn kho.');
+                if (!$variantModel->decreaseStock($variantId, $qty)) {
+                    throw new RuntimeException('Biến thể ' . $color . ' - ' . $size . ' không đủ tồn kho.');
                 }
             }
 
@@ -644,6 +649,7 @@ class OrderModel extends BaseModel
 
     /**
      * Hoàn tất hoàn hàng và ghi nhận đã hoàn tiền cho khách (cả COD và Online).
+     * Chỉ cộng lại tồn biến thể khi mọi dòng của đơn đều có variant_id hợp lệ.
      *
      * @param int         $orderId
      * @param string|null $refundNote Ghi chú xác nhận hoàn tiền (hình thức, mã giao dịch,...)
@@ -657,20 +663,69 @@ class OrderModel extends BaseModel
             return false;
         }
 
+        $items = $this->getOrderItems($orderId);
+        if (empty($items)) {
+            return false;
+        }
+
+        $canRestock       = true;
+        $variantQuantities = [];
+        foreach ($items as $item) {
+            $variantId = (int) ($item['variant_id'] ?? 0);
+            if ($variantId <= 0) {
+                $canRestock = false;
+                break;
+            }
+            $variantQuantities[$variantId] = ($variantQuantities[$variantId] ?? 0) + (int) ($item['quantity'] ?? 0);
+        }
+
+        $stockAttempted = false;
+
         try {
+            $this->pdo->beginTransaction();
+
             $sql = 'UPDATE ' . $this->table . ' '
-                 . 'SET order_status = :status, payment_status = :p_status, refund_note = :refund_note '
-                 . 'WHERE order_id = :id AND order_status = \'return_accepted\'';
+                 . 'SET order_status = :status, payment_status = :p_status, refund_note = :refund_note, stock_restored = :restored '
+                 . 'WHERE order_id = :id AND order_status = \'return_accepted\' AND stock_restored = 0';
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':status', 'returned');
             $statement->bindValue(':p_status', 'refunded');
             $statement->bindValue(':refund_note', $refundNote);
+            $statement->bindValue(':restored', $canRestock ? 1 : 0, PDO::PARAM_INT);
             $statement->bindValue(':id', $orderId, PDO::PARAM_INT);
             $statement->execute();
 
-            return $statement->rowCount() > 0;
+            if ($statement->rowCount() < 1) {
+                $this->pdo->rollBack();
+
+                return false;
+            }
+
+            if ($canRestock) {
+                $stockAttempted = true;
+                $variantModel = new ProductVariantModel($this->getConnection());
+                foreach ($variantQuantities as $variantId => $quantity) {
+                    if ($quantity <= 0) {
+                        continue;
+                    }
+                    if (!$variantModel->increaseStock($variantId, $quantity)) {
+                        throw new RuntimeException('Không thể cộng lại tồn kho cho biến thể #' . $variantId . '.');
+                    }
+                }
+            }
+
+            $this->pdo->commit();
+
+            return true;
         } catch (Throwable $e) {
-            // Fallback nếu chưa có cột refund_note
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            if ($stockAttempted) {
+                return false;
+            }
+
             try {
                 $sqlFallback = 'UPDATE ' . $this->table . ' '
                              . 'SET order_status = :status, payment_status = :p_status '

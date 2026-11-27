@@ -11,16 +11,46 @@
  * @var string|null $flashError
  */
 
+$variants   = $variants ?? [];
+$variantMap = $variantMap ?? [];
+
 $pId       = (int) ($product['product_id'] ?? 0);
 $pName     = (string) ($product['product_name'] ?? 'Sản phẩm thể thao');
 $pCatId    = (int) ($product['category_id'] ?? 0);
 $pCatName  = (string) ($product['categories_name'] ?? 'Thể thao');
 $pPrice    = (float) ($product['price'] ?? 0);
 $pOld      = isset($product['old_price']) ? (float) $product['old_price'] : ($pPrice * 1.25);
-$pStock    = (int) ($product['stock_quantity'] ?? 0);
 $pDesc     = (string) ($product['description'] ?? '');
 $pImage    = (string) ($product['image'] ?? '');
 $imgSrc    = get_product_image_url($pImage);
+
+$pStock        = 0;
+$initialVariant = null;
+foreach ($variants as $variant) {
+    if ((int) ($variant['is_active'] ?? 0) !== 1) {
+        continue;
+    }
+    $stock = (int) ($variant['stock_quantity'] ?? 0);
+    if ($stock > $pStock) {
+        $pStock = $stock;
+    }
+    if ($initialVariant === null && $stock > 0) {
+        $initialVariant = $variant;
+    }
+}
+
+$initialSize  = $initialVariant ? normalize_variant_value($initialVariant['size'] ?? '') : ($sizes[0] ?? '');
+$initialColor = $initialVariant ? normalize_variant_value($initialVariant['color'] ?? '') : ($colors[0] ?? '');
+
+$availableSizes  = [];
+$availableColors = [];
+foreach ($variantMap as $variant) {
+    if ((int) ($variant['is_active'] ?? 0) !== 1 || (int) ($variant['stock_quantity'] ?? 0) <= 0) {
+        continue;
+    }
+    $availableColors[normalize_variant_value($variant['color'] ?? '')] = true;
+    $availableSizes[normalize_variant_value($variant['size'] ?? '')] = true;
+}
 
 // % giảm giá
 $discountPercent = 0;
@@ -172,24 +202,26 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                         <!-- FORM CHỌN THUỘC TÍNH VÀ THÊM VÀO GIỎ HÀNG -->
                         <form action="<?= BASE_URL ?>?action=add-to-cart" method="post" id="addToCartForm">
                             <input type="hidden" name="product_id" value="<?= $pId ?>">
+                            <input type="hidden" name="variant_id" id="selectedVariantId" value="<?= $initialVariant ? (int) ($initialVariant['variant_id'] ?? 0) : 0 ?>">
 
                             <!-- CHỌN KÍCH CỠ (SIZE) -->
                             <?php if (!empty($sizes)): ?>
                                 <div class="product-option-group mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <label class="product-option-label fw-bold">
-                                            Kích cỡ (Size): <span id="selectedSizeText" class="text-accent fw-normal ms-1"><?= htmlspecialchars($sizes[0], ENT_QUOTES, 'UTF-8') ?></span>
+                                            Kích cỡ (Size): <span id="selectedSizeText" class="text-accent fw-normal ms-1"><?= htmlspecialchars($initialSize, ENT_QUOTES, 'UTF-8') ?></span>
                                         </label>
                                     </div>
                                     <div class="product-size-pills d-flex flex-wrap gap-2">
-                                        <?php foreach ($sizes as $idx => $s): ?>
-                                            <label class="size-pill-label">
+                                        <?php foreach ($sizes as $s): ?>
+                                            <?php $isAvailable = isset($availableSizes[normalize_variant_value($s)]); ?>
+                                            <label class="size-pill-label" title="<?= $isAvailable ? 'Còn hàng' : 'Tạm hết hàng' ?>">
                                                 <input type="radio"
                                                        name="size"
                                                        value="<?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?>"
                                                        class="size-pill-input"
-                                                       <?= $idx === 0 ? 'checked' : '' ?>
-                                                       onchange="document.getElementById('selectedSizeText').textContent = this.value">
+                                                       <?= normalize_variant_value($s) === normalize_variant_value($initialSize) ? 'checked' : '' ?>
+                                                       <?= $isAvailable ? '' : 'disabled' ?>>
                                                 <span class="size-pill-btn"><?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?></span>
                                             </label>
                                         <?php endforeach; ?>
@@ -201,17 +233,18 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                             <?php if (!empty($colors)): ?>
                                 <div class="product-option-group mb-4">
                                     <label class="product-option-label fw-bold mb-2">
-                                        Màu sắc: <span id="selectedColorText" class="text-accent fw-normal ms-1"><?= htmlspecialchars($colors[0], ENT_QUOTES, 'UTF-8') ?></span>
+                                        Màu sắc: <span id="selectedColorText" class="text-accent fw-normal ms-1"><?= htmlspecialchars($initialColor, ENT_QUOTES, 'UTF-8') ?></span>
                                     </label>
                                     <div class="product-color-pills d-flex flex-wrap gap-2">
-                                        <?php foreach ($colors as $idx => $c): ?>
-                                            <label class="color-pill-label">
+                                        <?php foreach ($colors as $c): ?>
+                                            <?php $isAvailable = isset($availableColors[normalize_variant_value($c)]); ?>
+                                            <label class="color-pill-label" title="<?= $isAvailable ? 'Còn hàng' : 'Tạm hết hàng' ?>">
                                                 <input type="radio"
                                                        name="color"
                                                        value="<?= htmlspecialchars($c, ENT_QUOTES, 'UTF-8') ?>"
                                                        class="color-pill-input"
-                                                       <?= $idx === 0 ? 'checked' : '' ?>
-                                                       onchange="document.getElementById('selectedColorText').textContent = this.value">
+                                                       <?= normalize_variant_value($c) === normalize_variant_value($initialColor) ? 'checked' : '' ?>
+                                                       <?= $isAvailable ? '' : 'disabled' ?>>
                                                 <span class="color-pill-btn"><?= htmlspecialchars($c, ENT_QUOTES, 'UTF-8') ?></span>
                                             </label>
                                         <?php endforeach; ?>
@@ -241,7 +274,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
                                                 id="qtyPlus"
                                                 aria-label="Tăng số lượng">+</button>
                                     </div>
-                                    <span class="text-muted small">
+                                    <span class="text-muted small" id="variantStockHint">
                                         (Tối đa <?= $pStock ?> sản phẩm)
                                     </span>
                                 </div>
@@ -375,13 +408,66 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
     </div>
 </div>
 
-<!-- JavaScript xử lý tăng giảm số lượng mua -->
+<!-- JavaScript xử lý chọn biến thể và tăng giảm số lượng mua -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const qtyInput = document.getElementById('qtyInput');
     const qtyMinus = document.getElementById('qtyMinus');
     const qtyPlus  = document.getElementById('qtyPlus');
-    const maxStock = <?= $pStock ?>;
+    const variantIdInput = document.getElementById('selectedVariantId');
+    const sizeInputs = document.querySelectorAll('.size-pill-input');
+    const colorInputs = document.querySelectorAll('.color-pill-input');
+    const addButtons = document.querySelectorAll('#addToCartForm button[type="submit"]');
+    const stockHint = document.getElementById('variantStockHint');
+    const selectedSizeText = document.getElementById('selectedSizeText');
+    const selectedColorText = document.getElementById('selectedColorText');
+    const variantData = <?= json_encode($variantMap, JSON_UNESCAPED_UNICODE) ?>;
+    let maxStock = <?= (int) $pStock ?>;
+
+    const normalize = function (value) {
+        return String(value).trim().replace(/\s+/g, ' ');
+    };
+
+    const syncVariant = function () {
+        const sizeInput = document.querySelector('.size-pill-input:checked:not(:disabled)');
+        const colorInput = document.querySelector('.color-pill-input:checked:not(:disabled)');
+        const size = sizeInput ? normalize(sizeInput.value) : '';
+        const color = colorInput ? normalize(colorInput.value) : '';
+        const variant = variantData[color + '|' + size];
+        const stock = variant && Number(variant.is_active) === 1
+            ? Math.max(0, parseInt(variant.stock_quantity, 10) || 0)
+            : 0;
+
+        maxStock = stock;
+
+        if (variantIdInput) {
+            variantIdInput.value = stock > 0 ? (variant.variant_id || '') : '';
+        }
+        if (qtyInput) {
+            qtyInput.max = Math.max(1, stock);
+            qtyInput.disabled = stock <= 0;
+            let val = parseInt(qtyInput.value, 10) || 1;
+            if (stock > 0 && val > stock) {
+                val = stock;
+            }
+            if (stock <= 0) {
+                val = 1;
+            }
+            qtyInput.value = val;
+        }
+        addButtons.forEach(function (button) {
+            button.disabled = stock <= 0;
+        });
+        if (stockHint) {
+            stockHint.textContent = stock > 0 ? '(Tối đa ' + stock + ' sản phẩm)' : '(Biến thể này tạm hết hàng)';
+        }
+        if (selectedSizeText && size !== '') {
+            selectedSizeText.textContent = size;
+        }
+        if (selectedColorText && color !== '') {
+            selectedColorText.textContent = color;
+        }
+    };
 
     if (qtyMinus && qtyInput) {
         qtyMinus.addEventListener('click', function () {
@@ -409,5 +495,13 @@ document.addEventListener('DOMContentLoaded', function () {
             this.value = val;
         });
     }
+
+    sizeInputs.forEach(function (input) {
+        input.addEventListener('change', syncVariant);
+    });
+    colorInputs.forEach(function (input) {
+        input.addEventListener('change', syncVariant);
+    });
+    syncVariant();
 });
 </script>
