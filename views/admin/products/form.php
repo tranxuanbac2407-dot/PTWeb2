@@ -16,7 +16,10 @@ $formAction = $isEdit
 
 $valName  = $old['product_name'] ?? ($product['product_name'] ?? '');
 $valCat   = (int) ($old['category_id'] ?? ($product['category_id'] ?? 0));
-$valPrice = $old['price'] ?? ($product['price'] ?? '');
+$valPrice = (string) ($old['price'] ?? ($product['price'] ?? ''));
+if (is_numeric($valPrice) && strpos($valPrice, '.') !== false) {
+    $valPrice = rtrim(rtrim($valPrice, '0'), '.');
+}
 $valSize  = $old['size'] ?? ($product['size'] ?? '');
 $valColor = $old['color'] ?? ($product['color'] ?? '');
 $valDesc  = $old['description'] ?? ($product['description'] ?? '');
@@ -658,9 +661,24 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     };
 
+    const collectStocks = function () {
+        const current = {};
+        const colorFields = matrix.querySelectorAll('input[name="variant_color[]"]');
+        const sizeFields = matrix.querySelectorAll('input[name="variant_size[]"]');
+        const stockFields = matrix.querySelectorAll('input[name="variant_stock[]"]');
+        const count = Math.min(colorFields.length, sizeFields.length, stockFields.length);
+        for (let i = 0; i < count; i++) {
+            const key = colorFields[i].value + '|' + sizeFields[i].value;
+            current[key] = stockFields[i].value;
+        }
+
+        return current;
+    };
+
     const build = function () {
         const colors = splitValues(colorInput.value);
         const sizes = splitValues(sizeHiddenInput.value);
+        const currentStocks = collectStocks();
 
         if (colors.length === 0 || sizes.length === 0) {
             matrix.innerHTML = '<p class="admin-form-hint">Chọn màu và kích thước để tạo ma trận tồn kho.</p>';
@@ -678,7 +696,12 @@ document.addEventListener('DOMContentLoaded', function () {
             html += '<tr><th class="align-middle">' + escapeHtml(color) + '</th>';
             sizes.forEach(function (size) {
                 const key = color + '|' + size;
-                const stock = Object.prototype.hasOwnProperty.call(variantStocks, key) ? variantStocks[key] : '';
+                let stock = 0;
+                if (Object.prototype.hasOwnProperty.call(currentStocks, key)) {
+                    stock = currentStocks[key];
+                } else if (Object.prototype.hasOwnProperty.call(variantStocks, key)) {
+                    stock = variantStocks[key];
+                }
                 html += '<td>'
                      + '<input type="hidden" name="variant_color[]" value="' + escapeHtml(color) + '">'
                      + '<input type="hidden" name="variant_size[]" value="' + escapeHtml(size) + '">'
